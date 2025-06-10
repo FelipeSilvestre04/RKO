@@ -3,12 +3,17 @@ OS := $(shell uname -s)
 ifeq ($(OS), Windows_NT)
     RM := del /Q /F
     EXE := .exe
-else
+	CCC = g++
+else ifeq ($(OS), Linux)
     RM := rm -f
     EXE :=
+	CCC = g++
+else ifeq ($(OS), Darwin)  
+    RM := rm -f
+    EXE :=
+	CCC = g++-14
 endif
 
-CCC = g++
 TARGETDIR = .
 CCFLAGS = -fopenmp -g -O3 -Wall -std=c++2a -Wno-unused-but-set-variable
 TARGET = $(TARGETDIR)/runTest$(EXE)
@@ -16,14 +21,14 @@ TARGET = $(TARGETDIR)/runTest$(EXE)
 debug: CCFLAGS += -g
 release: CCFLAGS += -march=native
 
-OBJS = $(TARGETDIR)/Main/main.o
+OBJS = $(TARGETDIR)/src/Main/main.o
 
 # Rule to generate the final binary
 $(TARGET): $(OBJS)
 	$(CCC) $(CCFLAGS) -o $@ $(OBJS)
 
 # Compilation of each object file
-$(TARGETDIR)/Main/main.o: $(TARGETDIR)/Main/main.cpp
+$(TARGETDIR)/src/Main/main.o: $(TARGETDIR)/src/Main/main.cpp
 	$(CCC) $(CCFLAGS) -c $< -o $@
 
 # Rule for running tests

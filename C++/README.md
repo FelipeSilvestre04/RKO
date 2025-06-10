@@ -1,20 +1,21 @@
+# Framework_v2.0
+This is the second version of the RKO framework
+
 
 # RKO - Random-Key Optimizer
 
 This is an implementation of the RKO to solve combinatorial optimization problems. The code was prepared for Unix and Windows systems. However, the openMP paradigm needs to be enabled.
 
-This algorithm's C++ code has been designed to be easy to reuse. Users can only implement specific functions (read and decoder). 
+This algorithm's C++ code has been designed to be easy to reuse. Users can only implement specific functions (read and decoder in Problem.h). 
 
-Here, we have the RKO version 1.0.1 code. RKO is constantly improving based on users’ feedback. 
+Here, we have the RKO version 2.0.1 code. RKO is constantly improving based on users’ feedback. 
 
-![RKO-JH](https://github.com/user-attachments/assets/0527b171-46b4-4dd5-b9e2-ad15e3e675ce)
+![RKO_pipeline](https://github.com/user-attachments/assets/bb26650b-b5f0-4fc7-9cb1-55f5ca8b6132)
 
 
 ## References
 
 When using this algorithm in academic studies, please refer to the following work:
-
-RKO version 1.0.1
 
 [1] Chaves, A.A., Resende, M.G.C., Schuetz, M.J.A.,  Brubaker, J.K., Katzgraber, H.G., Arruda, E.F., Silva, R.M.A. 
 A Random-Key Optimizer for Combinatorial Optimization. This paper has been submitted to the Journal of Heuristics.
@@ -24,36 +25,15 @@ https://doi.org/10.48550/arXiv.2411.04293
 
 ## Scope
 
-This code has been designed to solve the Traveling Salesman Problem (TSP). To solve other problems, users only need to configure the Problem.h file.
+This code has been designed to solve the Knapsack Problem (KP). To solve other problems, users only need to configure the Problem.h file.
 
 
 ## Running the algorithm
 
 * Enter the Program directory: `cd Program`
 * Run the make command: `make rebuild`
-* Run the RKO: `./runTest ../Instances/testScenario.csv K T D`, where k is the number of metaheuristics used to solve the problem, T is the tuning method (0 is offline and 1 is online), and D is the debug mode (1 to print information in the screen and 0 to save information in file)
-* In Windows: runTest.exe ../Instances/testScenario.csv K T D
-* Available metaheuristics:
-  
-"BRKGA"      = 0,
-
-"SA"         = 1,
-
-"GRASP"      = 2,
-
-"ILS"        = 3,
-
-"VNS"        = 4,
-
-"PSO"        = 5,
-
-"GA"         = 6,
-
-"LNS"        = 7,
-
-"BRKGA_CS"   = 8,
-
-"RKO"        = 9.
+* Run the RKO: `./runTest ../Instances/KP/kp50.txt T`, where T is the maximum running time (in seconds)
+* In Windows: runTest.exe ../Instances/KP/kp50.txt T
 
 * Or compile via terminal: `g++ -std=c++20 -o runTest main.cpp -O3 -fopenmp`
 
@@ -63,21 +43,45 @@ This code has been designed to solve the Traveling Salesman Problem (TSP). To so
 The code structure is documented in [1] and organized in the following manner:
 
 * **SPECIFIC_CODE:**
-    * **Problem.cpp**: Contains data structure of the problem, the input function, and the decoder.
+    * **Problem.h**: Contains data structure of the problem, the read data function, and the decoder.
 
 * **GENERAL_CODE:**
     * **/MH**: Contains all of the metaheuristic (MH) algorithm's mechanisms.
-    * **/Main**: Contains the main function to start the algorithm and stores the global variables.
+    * **/Main**: Contains the main function to start the algorithm and stores the shared variables.
     * **Data.h**: Represents the data structures.
     * **Output.h**: Stores the output functions, including the best solution found and statistical analysis of the MH.
 
-## File testScenario.csv is the input data problem, and each line consists of
+## File config_tests.conf is the configuration of the RKO test
 
-- Instance Name
-  
-- Maximum runtime (in seconds)
+* Metaheuristics in the RKO, each line is executed in a separate thread 
+    * SA
+    * ILS
+    * VNS
+    * BRKGA
+    * BRKGA-CS
+    * PSO
+    * GA
+    * LNS
+    * GRASP
+    * IPR
 
-- Maximum number of runs
+* defines the maximum number of runs
+    * MAXRUNS 1
+
+* defines the execution mode (0 for test mode or 1 for debug mode)
+    * debug 1
+
+* defines the parameter configuration mode (0 for offline tuning, 1 for online configuration using Q-Learning)
+    * control 1
+
+* local search strategy (1 for first improvement, 2 for best improvement)
+    * strategy 1
+
+* strategy to restart the search process (percentage of the maximum time at which the restart is triggered)
+    * restart 1
+
+* size of the elite pool solution
+    * sizePool 10
 
 Users need to create a folder named "Instances/ProblemName", where the instances must be; users also need to create a folder named "Results", where the results files are written.
 
@@ -89,4 +93,4 @@ Users can choose two parameter settings: parameter tuning (option 0) and paramet
 
 ## OpenMP
 
-The code was implemented to run in parallel using the OpenMP directive. In this setup, nine threads are required for each run. When the selected option is k = 9, each thread executes a different metaheuristic. Conversely, if the chosen option is k < 9, all threads execute the metaheuristic corresponding to k. The threads run independently, and information about the best solutions is shared through a solution pool.
+The code was implemented to run in parallel using the OpenMP directive. In this setup, #MH threads are required for each run. Each thread executes a different metaheuristic. The threads run independently, and information about the best solutions is shared through a solution pool.
