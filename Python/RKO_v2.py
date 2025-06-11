@@ -14,17 +14,196 @@ class RKO():
     def __init__(self, env):
         self.env = env
         self.__MAX_KEYS = self.env.tam_solution
+        self.LS_type = self.env.LS_type
         
-        
+    
+    def random_keys(self):
+        return np.random.random(self.__MAX_KEYS)        
+    
     def shaking(self, keys, beta_min, beta_max):
         
         beta = random.uniform(beta_min, beta_max)
         new_keys = copy.deepcopy(keys)
         
+        numero_pertubacoes = max(1, int(self.__MAX_KEYS * beta))
+        for _ in range(numero_pertubacoes):
+            
+            tipo = random.choice(['Swap', 'SwapN', 'Invert', 'Random'])
+            
+            if tipo == 'Swap':
+                idx1, idx2 = random.sample(range(self.__MAX_KEYS), 2)
+                new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
+                
+            
+            elif tipo == 'SwapN':
+                idx = random.randint(0, self.__MAX_KEYS - 1)
+                
+                if idx == 0:
+                    new_keys[idx], new_keys[idx + 1] = new_keys[idx + 1], new_keys[idx]                   
+                elif idx == self.__MAX_KEYS - 1:
+                    new_keys[idx], new_keys[idx - 1] = new_keys[idx - 1], new_keys[idx]                    
+                else:
+                    idx2 = random.choice([idx - 1, idx + 1])
+                    new_keys[idx], new_keys[idx2] = new_keys[idx2], new_keys[idx]
+                               
+            elif tipo == 'Invert':
+                idx = random.randint(0, self.__MAX_KEYS - 1)
+                
+                key = new_keys[idx]
+                new_keys[idx] = 1 - key  
+                            
+            elif tipo == 'Random':                
+                idx = random.randint(0, self.__MAX_KEYS - 1)
+                new_keys[idx] = random.random()
         
+        return new_keys
+        
+    def SwapLS(self, keys):
+        
+        if self.LS_type == 'Best':
+            
+            swap_order = [i for i in range(self.__MAX_KEYS)]
+            random.shuffle(swap_order)
+            
+            best_keys = copy.deepcopy(keys)
+            best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            
+            
+            for idx1 in swap_order:
+                for idx2 in reversed(swap_order):
+                    
+                    new_keys = copy.deepcopy(best_keys)
+                    new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
+                    new_cost = self.env.cost(self.env.decoder(new_keys))
+                    
+                    if new_cost < best_cost:
+                        best_keys = new_keys
+                        best_cost = new_cost
+
+                    
+            return best_keys
+        elif self.LS_type == 'First':
+            
+            swap_order = [i for i in range(self.__MAX_KEYS)]
+            random.shuffle(swap_order)
+            
+            best_keys = copy.deepcopy(keys)
+            best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            for idx1 in swap_order:
+                for idx2 in reversed(swap_order):
+                    
+                    new_keys = copy.deepcopy(best_keys)
+                    new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
+                    new_cost = self.env.cost(self.env.decoder(new_keys))
+                    
+                    if new_cost < best_cost:
+                        best_keys = new_keys
+                        best_cost = new_cost
+                        
+                        return best_keys
+                    
+            return best_keys
+            
+    def FareyLS(self, keys):
+        if self.LS_type == 'Best':
+            pass
+        elif self.LS_type == 'First':
+            pass
     
-    def random_keys(self):
-        return np.random.random(self.__MAX_KEYS)
+    def InvertLS(self, keys):
+        if self.LS_type == 'Best':
+            
+            swap_order = [i for i in range(self.__MAX_KEYS)]
+            random.shuffle(swap_order)
+            
+            best_keys = copy.deepcopy(keys)
+            best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            
+            
+            for idx in swap_order:
+              
+                    
+                new_keys = copy.deepcopy(best_keys)
+                new_keys[idx] = 1 - new_keys[idx]
+                new_cost = self.env.cost(self.env.decoder(new_keys))
+                
+                if new_cost < best_cost:
+                    best_keys = new_keys
+                    best_cost = new_cost
+
+                    
+            return best_keys
+        elif self.LS_type == 'First':
+            
+            swap_order = [i for i in range(self.__MAX_KEYS)]
+            random.shuffle(swap_order)
+            
+            best_keys = copy.deepcopy(keys)
+            best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            for idx in swap_order:
+            
+                    
+                new_keys = copy.deepcopy(best_keys)
+                new_keys[idx] = 1 - new_keys[idx]
+                new_cost = self.env.cost(self.env.decoder(new_keys))
+                    
+                if new_cost < best_cost:
+                    best_keys = new_keys
+                    best_cost = new_cost
+                    
+                    return best_keys
+                
+            return best_keys
+    
+    def NelderMeadSearch(self, keys):
+        if self.LS_type == 'Best':
+            pass
+        elif self.LS_type == 'First':
+            pass
+    def RVND(self, keys, max_iter):
+        
+        best_keys = copy.deepcopy(keys)
+        best_cost = self.env.cost(self.env.decoder(best_keys))
+        
+        
+        
+        neighborhoods = ['SwapLS', 'NelderMeadSearch','FareyLS', 'InvertLS']
+        not_used_nb = ['SwapLS', 'NelderMeadSearch','FareyLS', 'InvertLS']
+        
+        while not_used_nb:
+            
+            current_neighborhood = random.choice(not_used_nb)
+            
+            
+            if current_neighborhood == 'SwapLS':
+                new_keys = self.SwapLS(best_keys)
+            elif current_neighborhood == 'NelderMeadSearch':               
+                new_keys = self.NelderMeadSearch(best_keys)             
+            elif current_neighborhood == 'FareyLS':
+                new_keys = self.FareyLS(best_keys)
+            elif current_neighborhood == 'InvertLS':
+                new_keys = self.InvertLS(best_keys)
+                
+            new_cost = self.env.cost(self.env.decoder(new_keys))
+            
+            if new_cost < best_cost:
+                best_keys = new_keys
+                best_cost = new_cost
+                not_used_nb = copy.deepcopy(neighborhoods)
+                
+            else:
+                not_used_nb.remove(current_neighborhood)
+            
+        
+        return best_keys
+            
+            
+
+    
     def inserir_em_elite(self, elite, fitness_elite, key, fitness, tam_elite, modo='maiores'):
         if modo == 'maiores':
             # Lista em ordem decrescente (maior no começo, menor no fim)
