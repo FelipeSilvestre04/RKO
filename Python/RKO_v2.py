@@ -107,10 +107,53 @@ class RKO():
             return best_keys
             
     def FareyLS(self, keys):
+        
+        Farey_Squence = [0.00, 0.142857, 0.166667, 0.20, 0.25, 0.285714, 0.333333, 0.40, 0.428571, 0.50, 
+                             0.571429, 0.60, 0.666667, 0.714286, 0.75, 0.80, 0.833333, 0.857143, 1.0]
         if self.LS_type == 'Best':
-            pass
+            
+            swap_order = [i for i in range(self.__MAX_KEYS)]
+            random.shuffle(swap_order)
+            
+            best_keys = copy.deepcopy(keys)
+            best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            
+            
+            for idx in swap_order:
+                for i in range(len(Farey_Squence) - 1):
+                    
+                    new_keys = copy.deepcopy(best_keys)
+                    new_keys[idx] = random.uniform(Farey_Squence[i], Farey_Squence[i+1])
+                    new_cost = self.env.cost(self.env.decoder(new_keys))
+                    
+                    if new_cost < best_cost:
+                        best_keys = new_keys
+                        best_cost = new_cost    
+
+                    
+            return best_keys
         elif self.LS_type == 'First':
-            pass
+            
+            swap_order = [i for i in range(self.__MAX_KEYS)]
+            random.shuffle(swap_order)
+            
+            best_keys = copy.deepcopy(keys)
+            best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            for idx in swap_order:
+                for i in range(len(Farey_Squence) - 1):
+                    
+                    new_keys = copy.deepcopy(best_keys)
+                    new_keys[idx] = random.uniform(Farey_Squence[i], Farey_Squence[i+1])
+                    new_cost = self.env.cost(self.env.decoder(new_keys))
+                    
+                    if new_cost < best_cost:
+                        best_keys = new_keys
+                        best_cost = new_cost    
+                        return best_keys
+                       
+            return best_keys
     
     def InvertLS(self, keys):
         if self.LS_type == 'Best':
@@ -159,12 +202,19 @@ class RKO():
                 
             return best_keys
     
+    def Blending(self, keys1, keys2, alpha=0.5):
+  
+        new_keys = np.zeros(self.__MAX_KEYS)
+        for i in range(self.__MAX_KEYS):
+            new_keys[i] = alpha * keys1[i] + (1 - alpha) * keys2[i]
+        return new_keys
+    
     def NelderMeadSearch(self, keys):
         if self.LS_type == 'Best':
             pass
         elif self.LS_type == 'First':
             pass
-    def RVND(self, keys, max_iter):
+    def RVND(self, keys):
         
         best_keys = copy.deepcopy(keys)
         best_cost = self.env.cost(self.env.decoder(best_keys))
