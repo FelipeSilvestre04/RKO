@@ -202,18 +202,29 @@ class RKO():
                 
             return best_keys
     
-    def Blending(self, keys1, keys2, alpha=0.5):
+    def Blending(self, keys1, keys2, factor):
   
         new_keys = np.zeros(self.__MAX_KEYS)
+        
         for i in range(self.__MAX_KEYS):
-            new_keys[i] = alpha * keys1[i] + (1 - alpha) * keys2[i]
+            
+            if random.random() < 0.02: 
+                new_keys[i] = random.random()
+                
+            else:               
+                if random.random() < 0.5:
+                    new_keys[i] = keys1[i]
+                else:
+                    if factor == -1:
+                        new_keys[i] = 1 - keys2[i]
+                    else:
+                        new_keys[i] = keys2[i] 
+        
         return new_keys
     
+    
     def NelderMeadSearch(self, keys):
-        if self.LS_type == 'Best':
-            pass
-        elif self.LS_type == 'First':
-            pass
+ 
     def RVND(self, keys):
         
         best_keys = copy.deepcopy(keys)
