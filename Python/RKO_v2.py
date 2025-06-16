@@ -202,28 +202,293 @@ class RKO():
                 
             return best_keys
     
-    def Blending(self, keys1, keys2, factor):
+    # def Blending(self, keys1, keys2, factor):
   
+    #     new_keys = np.zeros(self.__MAX_KEYS)
+        
+    #     for i in range(self.__MAX_KEYS):
+            
+    #         if random.random() < 0.02: 
+    #             new_keys[i] = random.random()
+                
+    #         else:               
+    #             if random.random() < 0.5:
+    #                 new_keys[i] = keys1[i]
+    #             else:
+    #                 if factor == -1:
+    #                     new_keys[i] = 1 - keys2[i]
+    #                 else:
+    #                     new_keys[i] = keys2[i] 
+        
+    #     return new_keys
+    
+    
+    # def NelderMeadSearch(self, keys, pool):
+    #     keys1 = copy.deepcopy(keys)
+    #     keys_S = random.sample(list(pool), 1)[0][1]
+    #     keys_H = random.sample(list(pool), 1)[0][1]
+    #     while keys_S == keys_H: 
+    #         keys_S = random.sample(list(pool), 1)[0][1]
+    #         keys_H = random.sample(list(pool), 1)[0][1]
+            
+        
+    #     fit1 = self.env.cost(self.env.decoder(keys1))
+    #     fit_S = self.env.cost(self.env.decoder(keys_S))
+    #     fit_H = self.env.cost(self.env.decoder(keys_H))
+        
+    #     if fit1 < fit_S and fit1 < fit_H:
+    #         x1 = keys1
+    #         if fit_S < fit_H:
+    #             x2 = keys_S
+    #             x3 = keys_H
+    #         else:
+    #             x2 = keys_H
+    #             x3 = keys_S
+            
+    #     elif fit_S < fit1 and fit_S < fit_H:
+    #         x1 = keys_S
+    #         if fit1 < fit_H:
+    #             x2 = keys1
+    #             x3 = keys_H
+    #         else:
+    #             x2 = keys_H
+    #             x3 = keys1
+    #     else:
+    #         x1 = keys_H
+    #         if fit1 < fit_S:
+    #             x2 = keys1
+    #             x3 = keys_S
+    #         else:
+    #             x2 = keys_S
+    #             x3 = keys1
+                
+    #     xBest = x1
+    #     CostBest = fit1
+        
+    #     x0 = self.Blending(x1, x2, 1)
+    #     fit0 = self.env.cost(self.env.decoder(x0))
+    #     if fit0 < CostBest:
+    #         xBest = x0
+    #         CostBest = fit0
+    #         melhorou = 1
+            
+    #     iter = 1
+        
+    #     max_iter = math.exp(-2) * self.__MAX_KEYS
+    #     while iter < max_iter:
+    #         pass
+        
+    def Blending(self, keys1, keys2, factor):
         new_keys = np.zeros(self.__MAX_KEYS)
         
         for i in range(self.__MAX_KEYS):
-            
+            # Mutação com 2% de probabilidade
             if random.random() < 0.02: 
                 new_keys[i] = random.random()
-                
             else:               
                 if random.random() < 0.5:
                     new_keys[i] = keys1[i]
                 else:
                     if factor == -1:
-                        new_keys[i] = 1 - keys2[i]
+                        # Aplicar clamp como no C++: std::clamp(1.0 - s2.rk[j], 0.0, 0.9999999)
+                        new_keys[i] = max(0.0, min(1.0 - keys2[i], 0.9999999))
                     else:
                         new_keys[i] = keys2[i] 
         
         return new_keys
     
-    
-    def NelderMeadSearch(self, keys):
+    def NelderMeadSearch(self, keys, pool):
+        improved = 0
+        improvedX1 = 0
+        keys_origem = copy.deepcopy(keys)
+        
+        # Selecionar dois pontos elite aleatórios diferentes
+        k1 = random.randint(0, len(pool) - 1)
+        k2 = random.randint(0, len(pool) - 1)
+        while k1 == k2:
+            k1 = random.randint(0, len(pool) - 1)
+            k2 = random.randint(0, len(pool) - 1)
+        
+        x1 = copy.deepcopy(keys)
+        x2 = copy.deepcopy(pool[k1])  # Assumindo que pool[i] já são as keys
+        x3 = copy.deepcopy(pool[k2])
+        
+        # Calcular fitness
+        fit1 = self.env.cost(self.env.decoder(x1))
+        fit2 = self.env.cost(self.env.decoder(x2))
+        fit3 = self.env.cost(self.env.decoder(x3))
+        
+        # Ordenar pontos: x1 (melhor) <= x2 <= x3 (pior)
+        if fit1 > fit2:
+            x1, x2 = x2, x1
+            fit1, fit2 = fit2, fit1
+            
+        if fit1 > fit3:
+            x1, x3 = x3, x1
+            fit1, fit3 = fit3, fit1
+            
+        if fit2 > fit3:
+            x2, x3 = x3, x2
+            fit2, fit3 = fit3, fit2
+        
+        xBest = copy.deepcopy(x1)
+        fitBest = fit1
+        
+        # Calcular centroide do simplex
+        x0 = self.Blending(x1, x2, 1)
+        fit0 = self.env.cost(self.env.decoder(x0))
+        if fit0 < fitBest:
+            xBest = copy.deepcopy(x0)
+            fitBest = fit0
+            improved = 1
+            
+        iter_count = 1
+        eval_count = 0
+        
+        # Critério de parada igual ao C++
+        max_iter = int(self.__MAX_KEYS * math.exp(-2))
+        
+        while iter_count <= max_iter:
+            shrink = 0
+            
+            # Ponto de reflexão (r)
+            x_r = self.Blending(x0, x3, -1)
+            fit_r = self.env.cost(self.env.decoder(x_r))
+            if fit_r < fitBest:
+                xBest = copy.deepcopy(x_r)
+                fitBest = fit_r
+                improved = 1
+                improvedX1 = 1
+            eval_count += 1
+            
+            # x_r é melhor que x1 (melhor ponto)
+            if fit_r < fit1:
+                # Ponto de expansão (e)
+                x_e = self.Blending(x_r, x0, -1)
+                fit_e = self.env.cost(self.env.decoder(x_e))
+                if fit_e < fitBest:
+                    xBest = copy.deepcopy(x_e)
+                    fitBest = fit_e
+                    improved = 1
+                    improvedX1 = 1
+                eval_count += 1
+                
+                if fit_e < fit_r:
+                    # Expandir
+                    x3 = copy.deepcopy(x_e)
+                    fit3 = fit_e
+                else:
+                    # Refletir
+                    x3 = copy.deepcopy(x_r)
+                    fit3 = fit_r
+                    
+            # x_r NÃO é melhor que x1
+            else:
+                # x_r é melhor que x2 (segundo melhor)
+                if fit_r < fit2:
+                    # Refletir
+                    x3 = copy.deepcopy(x_r)
+                    fit3 = fit_r
+                else:
+                    # x_r é melhor que x3 (pior)
+                    if fit_r < fit3:
+                        # Ponto de contração (c)
+                        x_c = self.Blending(x_r, x0, 1)
+                        fit_c = self.env.cost(self.env.decoder(x_c))
+                        if fit_c < fitBest:
+                            xBest = copy.deepcopy(x_c)
+                            fitBest = fit_c
+                            improved = 1
+                            improvedX1 = 1
+                        eval_count += 1
+                        
+                        if fit_c < fit_r:
+                            # Contrair para fora
+                            x3 = copy.deepcopy(x_c)
+                            fit3 = fit_c
+                        else:
+                            # Encolher
+                            shrink = 1
+                    else:
+                        # Ponto de contração (c)
+                        x_c = self.Blending(x0, x3, 1)
+                        fit_c = self.env.cost(self.env.decoder(x_c))
+                        if fit_c < fitBest:
+                            xBest = copy.deepcopy(x_c)
+                            fitBest = fit_c
+                            improved = 1
+                            improvedX1 = 1
+                        eval_count += 1
+                        
+                        if fit_c < fit3:
+                            # Contrair para dentro
+                            x3 = copy.deepcopy(x_c)
+                            fit3 = fit_c
+                        else:
+                            # Encolher
+                            shrink = 1
+            
+            # Operação de encolhimento
+            if shrink:
+                x2 = self.Blending(x1, x2, 1)
+                fit2 = self.env.cost(self.env.decoder(x2))
+                if fit2 < fitBest:
+                    xBest = copy.deepcopy(x2)
+                    fitBest = fit2
+                    improved = 1
+                    improvedX1 = 1
+                eval_count += 1
+                
+                x3 = self.Blending(x1, x3, 1)
+                fit3 = self.env.cost(self.env.decoder(x3))
+                if fit3 < fitBest:
+                    xBest = copy.deepcopy(x3)
+                    fitBest = fit3
+                    improved = 1
+                    improvedX1 = 1
+                eval_count += 1
+            
+            # Reordenar pontos
+            if fit1 > fit2:
+                x1, x2 = x2, x1
+                fit1, fit2 = fit2, fit1
+                
+            if fit1 > fit3:
+                x1, x3 = x3, x1
+                fit1, fit3 = fit3, fit1
+                
+            if fit2 > fit3:
+                x2, x3 = x3, x2
+                fit2, fit3 = fit3, fit2
+            
+            # Calcular novo centroide
+            x0 = self.Blending(x1, x2, 1)
+            fit0 = self.env.cost(self.env.decoder(x0))
+            if fit0 < fitBest:
+                xBest = copy.deepcopy(x0)
+                fitBest = fit0
+                improved = 1
+                improvedX1 = 1
+            
+            # Controle de iterações
+            if improved == 1:
+                improved = 0
+                iter_count = 0
+            else:
+                iter_count += 1
+            
+            # Verificar condição de parada (equivalente ao stop_execution.load())
+            # if self.should_stop():
+            #     return keys_origem if improvedX1 == 0 else xBest
+        
+        # Retornar melhor solução encontrada
+        if improvedX1 == 1:
+            return xBest
+        else:
+            return keys_origem
+            
+        
+        
  
     def RVND(self, keys):
         
