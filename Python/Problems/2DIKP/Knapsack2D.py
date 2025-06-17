@@ -23,6 +23,8 @@ from matplotlib.patches import Polygon as MPolygon, Rectangle
 import random
 import math
 from typing import List, Tuple, Union
+import sys
+sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
 from RKO_v2 import RKO
 
 
