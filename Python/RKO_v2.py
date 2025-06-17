@@ -1229,5 +1229,5 @@ def _SA_worker(env, pop_size, elite_pop, chance_elite, limit_time, shared, lock,
             shared.best_keys = local_keys
             shared.best_time = time.time() - env.start_time
       
-      
+        
 
