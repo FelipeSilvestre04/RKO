@@ -15,6 +15,9 @@ class RKO():
         self.env = env
         self.__MAX_KEYS = self.env.tam_solution
         self.LS_type = self.env.LS_type
+        self.start_time = time.time()
+        self.max_time = self.env.max_time
+        
         
     
     def random_keys(self):
@@ -29,6 +32,7 @@ class RKO():
         for _ in range(numero_pertubacoes):
             
             tipo = random.choice(['Swap', 'SwapN', 'Invert', 'Random'])
+            
             
             if tipo == 'Swap':
                 idx1, idx2 = random.sample(range(self.__MAX_KEYS), 2)
@@ -55,6 +59,8 @@ class RKO():
             elif tipo == 'Random':                
                 idx = random.randint(0, self.__MAX_KEYS - 1)
                 new_keys[idx] = random.random()
+                
+            # print(f"Perturbação: {tipo} - Chave: {len(new_keys) == self.__MAX_KEYS} - Valor: {self.env.cost(self.env.decoder(new_keys))}")
         
         return new_keys
         
@@ -69,9 +75,16 @@ class RKO():
             best_cost = self.env.cost(self.env.decoder(best_keys))
             
             
-            
+            k = 0
             for idx1 in swap_order:
                 for idx2 in reversed(swap_order):
+                    
+                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                        return best_keys
+                    if time.time() - self.start_time > self.max_time:
+                        return best_keys
+
+                    k+=1
                     
                     new_keys = copy.deepcopy(best_keys)
                     new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
@@ -79,9 +92,8 @@ class RKO():
                     
                     if new_cost < best_cost:
                         best_keys = new_keys
-                        best_cost = new_cost
+                        best_cost = new_cost    
 
-                    
             return best_keys
         elif self.LS_type == 'First':
             
@@ -94,6 +106,11 @@ class RKO():
             for idx1 in swap_order:
                 for idx2 in reversed(swap_order):
                     
+                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                        return best_keys
+                    if time.time() - self.start_time > self.max_time:
+                        return best_keys
+                        
                     new_keys = copy.deepcopy(best_keys)
                     new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
                     new_cost = self.env.cost(self.env.decoder(new_keys))
@@ -109,7 +126,7 @@ class RKO():
     def FareyLS(self, keys):
         
         Farey_Squence = [0.00, 0.142857, 0.166667, 0.20, 0.25, 0.285714, 0.333333, 0.40, 0.428571, 0.50, 
-                             0.571429, 0.60, 0.666667, 0.714286, 0.75, 0.80, 0.833333, 0.857143, 1.0]
+                                 0.571429, 0.60, 0.666667, 0.714286, 0.75, 0.80, 0.833333, 0.857143, 1.0]
         if self.LS_type == 'Best':
             
             swap_order = [i for i in range(self.__MAX_KEYS)]
@@ -119,9 +136,16 @@ class RKO():
             best_cost = self.env.cost(self.env.decoder(best_keys))
             
             
-            
+            k = 0
             for idx in swap_order:
                 for i in range(len(Farey_Squence) - 1):
+                    
+                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                        return best_keys
+                    if time.time() - self.start_time > self.max_time:
+                        return best_keys
+
+                    k+=1
                     
                     new_keys = copy.deepcopy(best_keys)
                     new_keys[idx] = random.uniform(Farey_Squence[i], Farey_Squence[i+1])
@@ -130,8 +154,7 @@ class RKO():
                     if new_cost < best_cost:
                         best_keys = new_keys
                         best_cost = new_cost    
-
-                    
+ 
             return best_keys
         elif self.LS_type == 'First':
             
@@ -144,6 +167,11 @@ class RKO():
             for idx in swap_order:
                 for i in range(len(Farey_Squence) - 1):
                     
+                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                        return best_keys
+                    if time.time() - self.start_time > self.max_time:
+                        return best_keys
+                        
                     new_keys = copy.deepcopy(best_keys)
                     new_keys[idx] = random.uniform(Farey_Squence[i], Farey_Squence[i+1])
                     new_cost = self.env.cost(self.env.decoder(new_keys))
@@ -152,7 +180,7 @@ class RKO():
                         best_keys = new_keys
                         best_cost = new_cost    
                         return best_keys
-                       
+                        
             return best_keys
     
     def InvertLS(self, keys):
@@ -165,20 +193,24 @@ class RKO():
             best_cost = self.env.cost(self.env.decoder(best_keys))
             
             
-            
+            k = 0
             for idx in swap_order:
-              
-                    
+                
+                if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                    return best_keys
+                if time.time() - self.start_time > self.max_time:
+                    return best_keys
+
+                k+=1
                 new_keys = copy.deepcopy(best_keys)
                 new_keys[idx] = 1 - new_keys[idx]
                 new_cost = self.env.cost(self.env.decoder(new_keys))
                 
                 if new_cost < best_cost:
                     best_keys = new_keys
-                    best_cost = new_cost
+                    best_cost = new_cost    
 
-                    
-            return best_keys
+            return best_keys    
         elif self.LS_type == 'First':
             
             swap_order = [i for i in range(self.__MAX_KEYS)]
@@ -189,7 +221,11 @@ class RKO():
             
             for idx in swap_order:
             
-                    
+                if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                    return best_keys
+                if time.time() - self.start_time > self.max_time:
+                    return best_keys
+                        
                 new_keys = copy.deepcopy(best_keys)
                 new_keys[idx] = 1 - new_keys[idx]
                 new_cost = self.env.cost(self.env.decoder(new_keys))
@@ -201,7 +237,6 @@ class RKO():
                     return best_keys
                 
             return best_keys
-    
     # def Blending(self, keys1, keys2, factor):
   
     #     new_keys = np.zeros(self.__MAX_KEYS)
@@ -297,21 +332,24 @@ class RKO():
         
         return new_keys
     
-    def NelderMeadSearch(self, keys, pool):
+    def NelderMeadSearch(self, keys, pool = None):
         improved = 0
         improvedX1 = 0
         keys_origem = copy.deepcopy(keys)
         
-        # Selecionar dois pontos elite aleatórios diferentes
-        k1 = random.randint(0, len(pool) - 1)
-        k2 = random.randint(0, len(pool) - 1)
-        while k1 == k2:
-            k1 = random.randint(0, len(pool) - 1)
-            k2 = random.randint(0, len(pool) - 1)
+
         
         x1 = copy.deepcopy(keys)
-        x2 = copy.deepcopy(pool[k1])  # Assumindo que pool[i] já são as keys
-        x3 = copy.deepcopy(pool[k2])
+        if pool is None:
+            x2 = self.random_keys()
+            x3 = self.random_keys()
+        else:
+            
+            x2 = random.sample(list(pool), 1)[0][1]  
+            x3 = random.sample(list(pool), 1)[0][1]
+            while x2 == x3:
+                x2 = random.sample(list(pool), 1)[0][1]
+                x3 = random.sample(list(pool), 1)[0][1]
         
         # Calcular fitness
         fit1 = self.env.cost(self.env.decoder(x1))
@@ -349,6 +387,7 @@ class RKO():
         max_iter = int(self.__MAX_KEYS * math.exp(-2))
         
         while iter_count <= max_iter:
+            # print(f"FIT1: {fit1} - FIT2: {fit2} - FIT3: {fit3}")
             shrink = 0
             
             # Ponto de reflexão (r)
@@ -515,10 +554,13 @@ class RKO():
                 new_keys = self.InvertLS(best_keys)
                 
             new_cost = self.env.cost(self.env.decoder(new_keys))
+            # print(f"Neighborhood: {current_neighborhood} - Custo: {new_cost}")
             
             if new_cost < best_cost:
                 best_keys = new_keys
                 best_cost = new_cost
+                if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
+                    return best_keys
                 not_used_nb = copy.deepcopy(neighborhoods)
                 
             else:
@@ -621,7 +663,7 @@ class RKO():
             new_keys = self.vizinhos(best_keys)
             new_solution = self.env.decoder(new_keys)           
             new_cost = self.env.cost(new_solution)
-            # print(f"x {iter}, Custo: {new_cost}")
+            print(f"x {iter}, Custo: {new_cost}")
             
             if new_cost < best_cost: 
                 best_keys = new_keys
@@ -707,61 +749,260 @@ class RKO():
         return self.env.bins_usados,best_keys, best_cost
         
 
-    def SimulatedAnnealing(self,SAmax,Temperatura,alpha, tempo_max):
+    def SimulatedAnnealing(self, SAmax=50, Temperatura=10000, alpha=0.99, tempo_max=200, beta_min=0.05, beta_max=0.25, tag = 0):
+        metaheuristic_name = "SA"
+
         keys = self.random_keys()
+        keys = self.RVND(keys)
+
         best_keys = keys
-        
+
         solution = self.env.decoder(keys)
         cost = self.env.cost(solution)
         best_cost = cost
         
+        elapsed_time = time.time() - self.start_time # Tempo inicial para o primeiro print
+        print(f"\n{metaheuristic_name} NOVO MELHOR: {best_cost:.2f} - Tempo: {elapsed_time:.2f}s")
+        if self.env.dict_best is not None:
+            if best_cost == self.env.dict_best[self.env.instance_name]:
+                elapsed_time = time.time() - self.start_time
+                optimal_cost = self.env.dict_best[self.env.instance_name]
+                if optimal_cost != 0:
+                    gap = ((best_cost - optimal_cost) / optimal_cost) * 100
+                    print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
+                else:
+                    print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {best_cost:.2f} - Tempo Total: {elapsed_time:.2f}s")
+                return [], best_keys, best_cost
         start_time = time.time()
-        
         T = Temperatura
-        iter_total = 0
-        iter = 0
+        iter_at_temp = 0
+
         while time.time() - start_time < tempo_max:
-            
-            while iter < SAmax:
-                print(f"\rTempo: {round(time.time() - start_time,2):.1f}s  -  Temperatura {T:.1f}  -  ", end="")
-                iter+= 1
-                iter_total += 1
-                                
-                new_keys = self.vizinhos(keys)
-                                        
+            while iter_at_temp < SAmax:
+                # print(f"\rTempo: {round(time.time() - start_time, 2):.1f}s - Temperatura {T:.1f} - \n", end="")
+                iter_at_temp += 1
+
+                new_keys = self.shaking(keys, beta_min, beta_max)
                 new_solution = self.env.decoder(new_keys)
                 new_cost = self.env.cost(new_solution)
-                
                 
                 delta = new_cost - cost
                 
                 if new_cost < best_cost:
                     best_keys = new_keys
                     best_cost = new_cost
-                    
-                    print(f" NOVO MELHOR: {best_cost}")
-                    
-                               
+                    elapsed_time = time.time() - start_time
+                    print(f"\n{metaheuristic_name} NOVO MELHOR: {best_cost:.2f} - Tempo: {elapsed_time:.2f}s")
+                    if self.env.dict_best is not None:
+                        if best_cost == self.env.dict_best[self.env.instance_name]:
+                            elapsed_time = time.time() - start_time
+                            optimal_cost = self.env.dict_best[self.env.instance_name]
+                            if optimal_cost != 0:
+                                gap = ((best_cost - optimal_cost) / optimal_cost) * 100
+                                print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
+                            else:
+                                print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                            print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {best_cost:.2f} - Tempo Total: {elapsed_time:.2f}s")
+                            return [], best_keys, best_cost
+
                 if delta <= 0:
                     keys = new_keys
                     cost = new_cost
                 else:
-                    if random.random() < math.exp(-delta/T):
+                    if random.random() < math.exp(-delta / T):
                         keys = new_keys
                         cost = new_cost
-                        
-            iter = 0
+
+            iter_at_temp = 0
             T = T * alpha
-            
-        print(f"Melhor Custo: {best_cost}, tempo = {round(time.time() - start_time,2)}")
-        solution = self.env.decoder(best_keys)
-        cost = self.env.cost(solution, True)  
+            keys = self.RVND(keys)
+
+        final_cost_solution = self.env.decoder(best_keys)
+        final_cost_value = self.env.cost(final_cost_solution, True)
         
-            
-            
-        return self.env.bins_usados, best_keys, best_cost
+        elapsed_time = time.time() - start_time
+        print(f"{metaheuristic_name} ENCERRADO. Melhor Custo Final: {final_cost_value:.2f} - Tempo Total: {elapsed_time:.2f}s")
+
+        return [], best_keys, final_cost_value
+
+
+    def VNS(self, limit_time, x, tag, pool, lock, best, beta_min=0.05, k_max=6):
+        metaheuristic_name = "VNS"
+
+        idx_k = 0
+        start_time = time.time()
+        bests_S = []
+
+        keys = self.random_keys()
+        keys = self.RVND(keys)
+        best_keys = keys
+        best_cost = self.env.cost(self.env.decoder(keys))
+        bests_S.append(keys)
+
+        elapsed_time_init = time.time() - start_time # Tempo inicial para o primeiro print do VNS
+        print(f"{metaheuristic_name} {tag} NOVO MELHOR: {best_cost:.2f} - Tempo: {elapsed_time_init:.2f}s")
+        if self.env.dict_best is not None:
+            if best_cost == self.env.dict_best[self.env.instance_name]:
+                elapsed_time = time.time() - start_time
+                optimal_cost = self.env.dict_best[self.env.instance_name]
+                if optimal_cost != 0:
+                    gap = ((best_cost - optimal_cost) / optimal_cost) * 100
+                    print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
+                else:
+                    print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {best_cost:.2f} - Tempo Total: {elapsed_time:.2f}s")
+                return [], best_keys, best_cost
+
+        while time.time() - start_time < limit_time:
+            # print(f"\rTempo decorrido: {round(time.time() - start_time, 2):.1f}s - Vizinhança k={idx_k + 1}/{k_max} ", end="")
+
+            if idx_k >= k_max:
+                idx_k = 0
+
+            s1 = self.shaking(best_keys, idx_k * beta_min, (idx_k + 1) * beta_min)
+            s2 = self.RVND(s1)
+            sol2 = self.env.decoder(s2)
+            cost = self.env.cost(sol2)
+
+            if cost <= best_cost:
+                best_cost = cost
+                best_keys = s2
+                bests_S.append(s2)
+
+                with lock:
+                    entry = (best_cost, list(best_keys))
+                    bisect.insort(pool, entry)
+
+                    if len(pool) > 20:
+                        pool.pop()
+
+                    if best_cost < best[0]:
+                        best[0] = best_cost
+                        best[1] = list(best_keys)
+                        elapsed_time = time.time() - start_time
+                        print(f"{metaheuristic_name} {tag} NOVO MELHOR: {best_cost:.2f} - Tempo: {elapsed_time:.2f}s")
+
+                if self.env.dict_best is not None:
+                    if best_cost == self.env.dict_best[self.env.instance_name]:
+                        elapsed_time = time.time() - start_time
+                        optimal_cost = self.env.dict_best[self.env.instance_name]
+                        if optimal_cost != 0:
+                            gap = ((best_cost - optimal_cost) / optimal_cost) * 100
+                            print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
+                        else:
+                            print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                        print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {best_cost:.2f} - Tempo Total: {elapsed_time:.2f}s")
+                        return [], best_keys, best_cost
+            else:
+                idx_k += 1
+
+        final_cost_solution = self.env.decoder(best_keys)
+        final_cost_value = self.env.cost(final_cost_solution)
         
-        
+        elapsed_time = time.time() - start_time
+        print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {final_cost_value:.2f} - Tempo Total: {elapsed_time:.2f}s")
+
+        return [], best_keys, final_cost_value
+
+
+    def BRKGA(self, pop_size, elite_pop, chance_elite, limit_time, tag, pool, lock, best):
+        metaheuristic_name = "BRKGA"
+
+        generation = 0
+        tam_elite = int(pop_size * elite_pop)
+        half_time_restart_done = False
+
+        population = [self.random_keys() for _ in range(pop_size)]
+        best_keys_overall = None
+        best_fitness_overall = float('inf')
+
+        start_time = time.time()
+
+        while time.time() - start_time < limit_time:
+            if not half_time_restart_done and (time.time() - start_time) > (limit_time / 2):
+                population = [self.random_keys() for _ in range(pop_size)]
+                half_time_restart_done = True
+
+            generation += 1
+            
+            evaluated_population = []
+            for key in population:
+                sol = self.env.decoder(key)
+                fitness = self.env.cost(sol)
+                evaluated_population.append((key, sol, fitness))
+
+                if fitness < best_fitness_overall:
+                    best_fitness_overall = fitness
+                    best_keys_overall = key
+                    
+                    with lock:
+                        entry = (best_fitness_overall, list(best_keys_overall))
+                        bisect.insort(pool, entry)
+                        if len(pool) > 20:
+                            pool.pop()
+                        if best_fitness_overall < best[0]:
+                            best[0] = best_fitness_overall
+                            best[1] = list(best_keys_overall)
+                            elapsed_time = time.time() - start_time
+                            print(f"{metaheuristic_name} {tag} NOVO MELHOR: {best_fitness_overall:.2f} - Tempo: {elapsed_time:.2f}s")
+
+                if self.env.dict_best is not None:
+                    if fitness == self.env.dict_best[self.env.instance_name]:
+                        elapsed_time = time.time() - start_time
+                        optimal_cost = self.env.dict_best[self.env.instance_name]
+                        if optimal_cost != 0:
+                            gap = ((fitness - optimal_cost) / optimal_cost) * 100
+                            print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {fitness:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
+                        else:
+                            print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {fitness:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                        print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {fitness:.2f} - Tempo Total: {elapsed_time:.2f}s")
+                        return [], best_keys_overall, fitness
+            
+            evaluated_population.sort(key=lambda x: x[2])
+            
+            elite_keys = [item[0] for item in evaluated_population[:tam_elite]]
+
+            new_population = [elite_keys[0]]
+
+            while len(new_population) < pop_size:
+                parent1_source = random.random()
+                if parent1_source < 0.5 and len(pool) > 0:
+                    parent1 = random.sample(list(pool), 1)[0][1]
+                else:
+                    parent1 = random.sample(population, 1)[0]
+
+                parent2_source = random.random()
+                if parent2_source < 0.5 and len(elite_keys) > 0:
+                    parent2 = random.sample(elite_keys, 1)[0]
+                else:
+                    parent2 = random.sample(population, 1)[0]
+
+                child = np.zeros(self.__MAX_KEYS)
+                for i in range(len(child)):
+                    if random.random() < chance_elite:
+                        child[i] = parent2[i]
+                    else:
+                        child[i] = parent1[i]
+                
+                for idx in range(len(child)):
+                    if random.random() < 0.05:
+                        child[idx] = random.random()
+
+                new_population.append(child)
+            
+            population = new_population[:pop_size]
+
+            # print(f"\r{metaheuristic_name} {tag} Geração {generation}: Melhor fitness = {best_fitness_overall:.2f} - Tempo: {round(time.time() - start_time, 2)}s", end="")
+
+        final_cost_solution = self.env.decoder(best_keys_overall)
+        final_cost_value = self.env.cost(final_cost_solution)
+
+        elapsed_time = time.time() - start_time
+        print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {final_cost_value:.2f} - Tempo Total: {elapsed_time:.2f}s")
+
+        return [], best_keys_overall, best_fitness_overall
+
     def GRASP(self,max_iter,x, tempo = None): # GRASP, gera várias soluções semi gulosas e aplica a busca local em cada uma delas, retornando a melhor solução encontrada
         best_keys = None
         best_cost = float('inf')
@@ -792,423 +1033,82 @@ class RKO():
         print(f"Melhor Custo: {best_cost}, Melhor Custo Inicial: {best_ini_cost}, tempo = {time.time() - start_time}")  
 
         return best_keys, best_cost
-    
-    def VNS(self,limit_time,x, tag,  pool,lock,best):
-        k = [[0.01, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 0.99]]
-        idx_k = 0
-        start_time = time.time()
-        bests_S = []
-        if self.env.greedy:
-            sol = self.env.ssp3()
-            s = sol[1]
-            bests_S.append(s)
-            
-            best_cost = sol[0]
-            best_keys = s
-            
-            sol = self.env.greedy_solution_capacity(0)
-            s = sol[1]
-            bests_S.append(s)
-
-        
-            if best_cost > sol[0]:
-                best_cost = sol[0]
-                best_keys = s
-            
-            sol = self.env.greedy_solution_cost(0)
-            s = sol[1]
-            bests_S.append(s)
-            
-            if best_cost > sol[0]:
-                best_cost = sol[0]
-                best_keys = s
-        else:
-            keys = self.random_keys()
-            best_keys = keys
-            best_cost = self.env.cost(self.env.decoder(keys))
-            bests_S.append(keys)
-        
-        
-        
- 
-        
-        print(f"VNS {tag} Melhor Custo: {best_cost} - tempo = {time.time() - start_time}")
-        if self.env.dict_best is not None:
-            if best_cost == self.env.dict_best[self.env.instance_name]:
-                        print(f"VNS {tag} MELHOR: {best_cost} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((best_cost - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% tempo = {time.time() - start_time}")                        
-                        print(f"VNS {tag} ENCERRADO")
-                        solution = self.env.decoder(best_keys)
-                        cost = self.env.cost(solution, True)  
-                            
-                                
-                                
-                        return [], best_keys, best_cost    
-        
-        while time.time() - start_time < limit_time:
-            print(f"\rtempo = {round(time.time() - start_time,2)} ", end="")
-
-            if idx_k >= len(k) + 1:
-                idx_k = 0
-                
-            if random.random() < 0.1:
-                    s1 = random.sample(list(pool), 1)[0][1]
-            
-            else:
-
-                if idx_k == len(k):
-                    s1 = self.pertubacao(bests_S[random.randint(0, len(bests_S)-1)])
-                    # print("Pertubação")
-                else:  
-                    s1 = self.vizinhos(bests_S[random.randint(0, len(bests_S)-1)], k[idx_k][0], k[idx_k][1])
-                    
-            # print(s1)
-            s2 = self.LocSearch(s1,x)
-            
-            sol2 = self.env.decoder(s2)
-            cost = self.env.cost(sol2)
-            # print(tag, cost,best_cost)
-            
-            if cost <= best_cost:
-                best_cost = cost
-                best_keys = s2
-                
-                bests_S.append(s2)
-                # print(f"VNS {tag} Melhor Custo: {best_cost} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((best_cost - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% tempo = {time.time() - start_time}")
-                with lock:
-                    entry = (best_cost, list(best_keys))
-                       
-                    bisect.insort(pool, entry)  
-                    
-                    if len(pool) > 20:
-                        pool.pop()
-                        
-                    if best_cost < best[0]:
-                        best[0] = best_cost
-                        best[1] = list(best_keys)
-                        print(f"VNS {tag} NOVO MELHOR: {best_cost} - tempo = {time.time() - start_time}")
-                        
-                
-                if self.env.dict_best is not None:
-                    if best_cost == self.env.dict_best[self.env.instance_name]:
-                        print(f"VNS {tag} MELHOR: {best_cost} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((best_cost - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% tempo = {time.time() - start_time}")                        
-                        print(f"VNS {tag} ENCERRADO")
-                        solution = self.env.decoder(best_keys)
-                        cost = self.env.cost(solution, True)  
-                            
-                                
-                                
-                        return [], best_keys, best_cost        
-            else:
-                idx_k += 1
-
-        solution = self.env.decoder(best_keys)
-        cost = self.env.cost(solution)  
-        
-            
-        print(f"VNS {tag} ENCERRADO")
-        return [], best_keys, best_cost
-            
-    
-    def ILS(self,limit_time,x, tag,  pool,lock,best):
+    def ILS(self, limit_time, x, tag, pool, lock, best, beta_min=0.05, beta_max=0.25):
+        metaheuristic_name = "ILS"
 
         start_time = time.time()
         bests_S = []
-        if self.env.greedy:
-            sol = self.env.ssp3()
-            s = sol[1]
-            bests_S.append(s)
-            
-            best_cost = sol[0]
-            best_keys = s
-            
-            sol = self.env.greedy_solution_capacity(0)
-            s = sol[1]
-            bests_S.append(s)
 
+        keys = self.random_keys()
+        keys = self.RVND(keys)
+        best_keys = keys
+        best_cost = self.env.cost(self.env.decoder(keys))
+        bests_S.append(keys)
         
-            if best_cost > sol[0]:
-                best_cost = sol[0]
-                best_keys = s
-            
-            sol = self.env.greedy_solution_cost(0)
-            s = sol[1]
-            bests_S.append(s)
-            
-            if best_cost > sol[0]:
-                best_cost = sol[0]
-                best_keys = s
-        else:
-            keys = self.random_keys()
-            best_keys = keys
-            best_cost = self.env.cost(self.env.decoder(keys))
-            bests_S.append(keys)
-        
-        
-        
- 
-        
-        
-        print(f"ILS {tag} Melhor Custo: {best_cost} - tempo = {time.time() - start_time}")
+        elapsed_time_init = time.time() - start_time
+        print(f"{metaheuristic_name} {tag} NOVO MELHOR: {best_cost:.2f} - Tempo: {elapsed_time_init:.2f}s")
         if self.env.dict_best is not None:
             if best_cost == self.env.dict_best[self.env.instance_name]:
-                        print(f"VNS {tag} MELHOR: {best_cost} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((best_cost - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% tempo = {time.time() - start_time}")                        
-                        print(f"VNS {tag} ENCERRADO")
-                        solution = self.env.decoder(best_keys)
-                        cost = self.env.cost(solution, True)  
-                            
-                                
-                                
-                        return [], best_keys, best_cost    
-        while time.time() - start_time < limit_time:
-            print(f"\rtempo = {round(time.time() - start_time,2)} ", end="")
-
-
-                
-            if random.random() < 0.1:
-                    s1 = random.sample(list(pool), 1)[0][1]
-            
-            else:
-                if random.random() < 0.2:
-                    s1 = self.pertubacao(bests_S[random.randint(0, len(bests_S)-1)])
-                
+                elapsed_time = time.time() - start_time
+                optimal_cost = self.env.dict_best[self.env.instance_name]
+                if optimal_cost != 0:
+                    gap = ((best_cost - optimal_cost) / optimal_cost) * 100
+                    print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
                 else:
-                    min = random.random()          
-                    max = random.uniform(min, 1.0) 
-                    s1 = self.vizinhos(bests_S[random.randint(0, len(bests_S)-1)], min, max)
-                    
-            s2 = self.LocSearch(s1,x)
+                    print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {best_cost:.2f} - Tempo Total: {elapsed_time:.2f}s")
+                return [], best_keys, best_cost
+
+        while time.time() - start_time < limit_time:
+            # print(f"\rTempo decorrido: {round(time.time() - start_time, 2):.1f}s ", end="")
+
+            s1 = self.shaking(best_keys, beta_min, beta_max)
+            s2 = self.RVND(s1)
             
             sol2 = self.env.decoder(s2)
             cost = self.env.cost(sol2)
-            
-            
+
             if cost <= best_cost:
                 best_cost = cost
                 best_keys = s2
                 
                 bests_S.append(s2)
-                # print(f"ILS {tag} Melhor Custo: {best_cost} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((best_cost - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% tempo = {time.time() - start_time}")
                 with lock:
                     entry = (best_cost, list(best_keys))
-                       
-                    bisect.insort(pool, entry)  
+                    bisect.insort(pool, entry)
                     
                     if len(pool) > 20:
                         pool.pop()
                     if best_cost < best[0]:
                         best[0] = best_cost
                         best[1] = list(best_keys)
-                        print(f"ILS {tag} NOVO MELHOR: {best_cost} - tempo = {time.time() - start_time}")
+                        elapsed_time = time.time() - start_time
+                        print(f"ILS {tag} NOVO MELHOR: {best_cost:.2f} - Tempo: {elapsed_time:.2f}s")
 
                 if self.env.dict_best is not None:
                     if best_cost == self.env.dict_best[self.env.instance_name]:
-                        print(f"ILS {tag} MELHOR: {best_cost} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((best_cost - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% tempo = {time.time() - start_time}")
-                        print(f"ILS {tag} ENCERRADO")
-                            
-                        solution = self.env.decoder(best_keys)
-                        cost = self.env.cost(solution, True)  
-                            
-                                
-                                
+                        elapsed_time = time.time() - start_time
+                        optimal_cost = self.env.dict_best[self.env.instance_name]
+                        if optimal_cost != 0:
+                            gap = ((best_cost - optimal_cost) / optimal_cost) * 100
+                            print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f} - GAP: {gap:.2f}%) - Tempo: {elapsed_time:.2f}s")
+                        else:
+                            print(f"\n{metaheuristic_name} {tag} ÓTIMO ENCONTRADO: {best_cost:.2f} (BEST: {optimal_cost:.2f}) - Tempo: {elapsed_time:.2f}s")
+                        print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {best_cost:.2f} - Tempo Total: {elapsed_time:.2f}s")
                         return [], best_keys, best_cost
 
-        solution = self.env.decoder(best_keys)
-        cost = self.env.cost(solution)  
+        final_cost_solution = self.env.decoder(best_keys)
+        final_cost_value = self.env.cost(final_cost_solution)
         
-            
-        print(f"ILS {tag} ENCERRADO")
-        return [], best_keys, best_cost
-    
-
-        
-    def BRKGA(self, pop_size, elite_pop, chance_elite, limit_time,tag,pool,lock,best):
-        generation = 0
-        tam_elite = int(pop_size * elite_pop)
-        metade = False
-        
-        
-        if self.env.greedy:
-            population = [self.random_keys() for _ in range(pop_size - 3)]
-            cost,keys = self.env.ssp3()
-            population.append(keys)
-            cost,keys = self.env.greedy_solution_capacity(0)
-            population.append(keys)
-            cost,keys = self.env.greedy_solution_cost(0)
-            population.append(keys)
-        else:
-            population = [self.random_keys() for _ in range(pop_size)]
-        best_keys = None
-        best_fitness = float('inf')
-        
-        start_time = time.time()
-        
-        pop = 0
-        qnt = 0
-        while time.time() - start_time < limit_time:
-            if metade == False:
-                metade = True
-                if time.time() - start_time > limit_time/2:
-                    population = [self.random_keys() for _ in range(pop_size)]
-                    # with lock:
-                    #     pool = []
-            pop += 1
-            generation += 1
-            
-            elite = []
-            elite_sol = []
-            fitness_elite = []
-            
-            fitness_values = []
-
-                  
-            
-            
-            for key in population:
-                
-                qnt += 1
-                
-                sol = self.env.decoder(key)
-                fitness = self.env.cost(sol)
-                
-                fitness_values.append(fitness)
-                
-
-                
-                if  not sol in elite_sol:
-                    elite.append(key)
-                    elite_sol.append(sol)
-                    fitness_elite.append(fitness)
-                
-                
-                
-
-
-                
-                if fitness < best_fitness:
-                    pop = 0
-                    best_keys = key
-                    best_fitness = fitness
-                    with lock:
-                        entry = (best_fitness, list(best_keys))
-                        # print(entry)
-                        bisect.insort(pool, entry)  
-                        # print(pool.type)     
-                        if len(pool) > 20:
-                            pool.pop()
-                        if best_fitness < best[0]:
-                            best[0] = best_fitness
-                            best[1] = list(best_keys)
-                            print(f"BRKGA {tag} NOVO MELHOR: {best_fitness} -  Tempo: {round(time.time() - start_time,2)}s")
-          
-                        
-                    # print(f"BRKGA {tag} Melhor Custo: {fitness} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((fitness - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% -  Tempo: {round(time.time() - start_time,2)}s")
-          
-                    if self.env.dict_best is not None:
-                        if fitness == self.env.dict_best[self.env.instance_name]:
-                            print(f" \n{tag} MELHOR: {fitness} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((fitness - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}% -  Tempo: {round(time.time() - start_time,2)}s")
-                            print(f"BRKGA {tag} ENCERRADO")
-                            
-                            solution = self.env.decoder(best_keys)
-                            cost = self.env.cost(solution, True)  
-                            
-                                
-                                
-                            return [], best_keys, best_fitness
-        
-            ordenado = sorted(zip(elite, fitness_elite), key=lambda x: x[1]) 
-            elite, fitness_elite = zip(*ordenado)  
-
-            elite = list(elite)
-            fitness_elite = list(fitness_elite)
-    
-            elite = elite[:tam_elite]
-            fitness_elite = fitness_elite[:tam_elite]
-            
-            
-            # print(fitness_elite)
-
-            best_local_fitness = fitness_elite[0]
-            best_local_keys = elite[0]
-
-
-            # with lock:
-            #     if fitness_elite[0] < best[0]:
-            #         best[0] = fitness_elite[0]
-            #         best[1] = elite[0]
-            #         print(f" \nBRKGA {tag} NOVO MELHOR: {fitness} - BEST:{self.env.dict_best[self.env.instance_name]} - GAP: {round((fitness - self.env.dict_best[self.env.instance_name]) / self.env.dict_best[self.env.instance_name] * 100, 2)}%")
-
-
-                        
-                        
-                # print(pool)
-                    
-            new_population = [elite[0]]
-  
-
-            while len(new_population) < pop_size:
-                
-                if random.random() < 1:
-                    parent1 = random.sample(population, 1)[0]
-                else:
-                    parent1 = random.sample(list(pool), 1)[0][1]
-                    
-                if random.random() < 1:
-                    parent2 = random.sample(elite, 1)[0]
-                else:
-                    parent2 = random.sample(list(pool), 1)[0][1]
-                    
-                
-               
-                child1 = np.zeros(self.__MAX_KEYS)
-                child2 = np.zeros(self.__MAX_KEYS)
-                if random.random() < 0.95:
-                    for i in range(len(child1)):
-                        if random.random() < chance_elite:
-                            child1[i] = parent2[i]
-                            child2[i] = parent1[i]
-                            
-                        else:
-                            child1[i] = parent1[i]
-                            child2[i] = parent2[i]
-                else:
-                    child1 = parent1
-                    child2 = parent2
-                
-                
-                for idx in range(len(child1)):
-                    if random.random() < 0.05:
-                        
-                        child1[idx] = random.random()
-                    if random.random() < 0.05:
-                        child2[idx] = random.random()                
-                new_population.append(child1)
-                new_population.append(child2)
-            
-   
-                
-     
-            population = new_population
-            population.pop(0)
-            key_pool = random.sample(list(pool), 1)[0][1]
-            population.append(key_pool)
-            print(f"\rtempo = {round(time.time() - start_time,2)} ", end="")
-
-            # print(f"\r{tag} Geração {generation + 1}: Melhor fitness = {best_fitness}  -  Tempo: {round(time.time() - start_time,2)}s")
-            
-            
-        solution = self.env.decoder(best_keys)
-        cost = self.env.cost(solution)  
-        
-            
-        # print(qnt)
-        print(f"BRKGA {tag} ENCERRADO")    
-        return [], best_keys, best_fitness
+        elapsed_time = time.time() - start_time
+        print(f"{metaheuristic_name} {tag} ENCERRADO. Melhor Custo Final: {final_cost_value:.2f} - Tempo Total: {elapsed_time:.2f}s")
+        return [], best_keys, final_cost_value
 
     def solve(self, pop_size, elite_pop, chance_elite, limit_time, n_workers=None,brkga=1, ms=1, sa=1, vns=1, ils=1):
         """Roda múltiplas instâncias de BRKGA em paralelo e compartilha apenas best_solution."""
         if n_workers is None:
             n_workers = cpu_count()
-
+        self.max_time = limit_time
 
 
         manager = Manager()
@@ -1239,7 +1139,7 @@ class RKO():
         for _ in range(sa):
             p = Process(
                 target=_SA_worker,
-                args=( limit_time, shared, lock,tag)
+                args=(self.env, pop_size, elite_pop, chance_elite, limit_time, shared, lock,tag)
             )
             tag += 1
             processes.append(p)
@@ -1315,10 +1215,12 @@ def _ILS_worker(env, limit_time, x, shared, lock,tag):
 
 def _SA_worker(env, pop_size, elite_pop, chance_elite, limit_time, shared, lock,tag):
     runner = RKO(env)
-    _, local_keys, local_best = runner.SimulatedAnnealing( limit_time,tag,shared.best_pool,lock)
+    _, local_keys, local_best = runner.SimulatedAnnealing( )
     
     with lock:
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
       
+      
+
