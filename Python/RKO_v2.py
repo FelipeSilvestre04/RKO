@@ -1116,7 +1116,8 @@ class RKO():
         shared.best_keys = None
         shared.best_fitness = float('inf')
         shared.best_pair = manager.list([float('inf'), None])
-        shared.best_pool = manager.list() 
+        shared.best_pool = manager.list()
+        shared.best_time = None 
         lock = manager.Lock()
         processes = []
         tag = 0
@@ -1168,7 +1169,7 @@ class RKO():
         solution = self.env.decoder(shared.best_keys)
         
         cost = self.env.cost(solution)
-        return cost, solution
+        return cost, solution, shared.best_time
         
 def _brkga_worker(env, pop_size, elite_pop, chance_elite, limit_time, shared, lock,tag):
     runner = RKO(env)
@@ -1178,6 +1179,7 @@ def _brkga_worker(env, pop_size, elite_pop, chance_elite, limit_time, shared, lo
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
+            shared.best_time = time.time() - env.start_time
 
 def _MS_worker(env, max_itr, x, limit_time, shared, lock,tag):
     runner = RKO(env)
@@ -1187,6 +1189,7 @@ def _MS_worker(env, max_itr, x, limit_time, shared, lock,tag):
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
+            shared.best_time = time.time() - env.start_time
 def _GRASP_worker(env, max_itr, x, limit_time, shared, lock,tag):
     runner = RKO(env)
     _, local_keys, local_best = runner.MultiStart( max_itr,x,limit_time,tag,shared.best_pool,lock,shared.best_pair)
@@ -1195,6 +1198,7 @@ def _GRASP_worker(env, max_itr, x, limit_time, shared, lock,tag):
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
+            shared.best_time = time.time() - env.start_time
             
 def _VNS_worker(env, limit_time, x, shared, lock,tag):
     runner = RKO(env)
@@ -1204,6 +1208,7 @@ def _VNS_worker(env, limit_time, x, shared, lock,tag):
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
+            shared.best_time = time.time() - env.start_time
 def _ILS_worker(env, limit_time, x, shared, lock,tag):
     runner = RKO(env)
     _, local_keys, local_best = runner.ILS(limit_time,x,tag,shared.best_pool,lock,shared.best_pair)
@@ -1212,6 +1217,7 @@ def _ILS_worker(env, limit_time, x, shared, lock,tag):
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
+            shared.best_time = time.time() - env.start_time
 
 def _SA_worker(env, pop_size, elite_pop, chance_elite, limit_time, shared, lock,tag):
     runner = RKO(env)
@@ -1221,6 +1227,7 @@ def _SA_worker(env, pop_size, elite_pop, chance_elite, limit_time, shared, lock,
         if local_best < shared.best_fitness:
             shared.best_fitness = local_best
             shared.best_keys = local_keys
+            shared.best_time = time.time() - env.start_time
       
       
 
