@@ -8,7 +8,21 @@ import datetime
 import bisect
 from multiprocessing import Manager, Process, cpu_count
 
-
+class SolutionPool():
+    def __init__(self, size):
+        self.size = size
+        self.pool = []
+        self.best = None
+        self.best_cost = float('inf')
+        
+    def insert(self, entry):
+        if entry[0] < self.best_cost:
+            self.best_cost = entry[0]
+            self.best = entry[1]
+            
+        bisect.insort(self.pool, entry)
+        if len(self.pool) > self.size:
+            self.pool.pop()
 
 class RKO():
     def __init__(self, env):
