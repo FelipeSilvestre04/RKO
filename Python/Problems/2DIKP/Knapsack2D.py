@@ -565,6 +565,7 @@ class Knapsack2D():
             6: self.UR,
             7: self.RU,
         }
+        self.dict_sol = {}
         self.tam_solution = 2 * self.max_pecas
         self.LS_type = 'Best'
         self.greedy = []
@@ -854,21 +855,28 @@ class Knapsack2D():
 
     def cost(self, sol, tag = 0):
         if tag == 0:
-            rot = sol[:self.max_pecas]
-            regras = sol[self.max_pecas:]
-            i = 0
-            for peca in self.lista_original:
-                # print(i)
-                self.pack(self.lista.index(peca),rot[i], regras[i])
-                i+=1
-                # self.plot()
-            
-            fit = -1 * self.area_usada()
-            # if self.lista == []:
-            #     self.plot()    
-            self.reset()    
-            # print(self.counter, fit)
-            return fit
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                rot = sol[:self.max_pecas]
+                regras = sol[self.max_pecas:]
+                i = 0
+                for peca in self.lista_original:
+                    # print(i)
+                    self.pack(self.lista.index(peca),rot[i], regras[i])
+                    i+=1
+                    # self.plot()
+                
+                fit = -1 * self.area_usada()
+                # if self.lista == []:
+                #     self.plot()
+                pecas = len(self.pecas_posicionadas)    
+                self.reset()    
+                # print(self.counter, fit)
+                self.dict_sol[tuple(sol)] = fit
+                if fit < -88:
+                    print(fit, pecas, self.max_pecas)
+                return fit
         
         elif tag == 1:
             regras = sol
@@ -954,19 +962,23 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","dighe1","dighe2","albano","dagli","mao","marques","shirts","swim","trousers"]
+    instancias = ["trousers","shirts","swim","shapes0","shapes1","shapes2","dighe1","dighe2","albano","dagli","mao","marques","fu","jackobs1","jackobs2"]
     for tempo in [400]:        
         for ins in instancias:
             list_time = []
             list_cost = []
             for i in range(5):
-                env = Knapsack2D(dataset=ins, tempo=tempo)
+                print(f'Instancia: {ins}, Tentativa: {i+1}')
+                env = Knapsack2D(dataset=ins, tempo=400)
                 solver = RKO(env)
                 # while True:
-                #   env.cost(env.decoder(solver.random_keys()))
-                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,6,2,0,1,2,1)
-                list_time.append(temp)
-                list_cost.append(cost*-1)
+                # #   env.cost(env.decoder(solver.random_keys()))
+                #     start = time.time()
+                #     solver.RVND(solver.random_keys(), None)
+                #     print('\n',round(time.time() - start, 2), 'segundos')
+                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,5,1,1,1,1,1)
+                list_time.append(round(temp,2))
+                list_cost.append(round(cost*-1,2))
                 
             with open('testes_RKO.csv', 'a', newline='') as f:
-                f.write(f'{tempo}, {ins}, {round(sum(list_cost)/len(list_cost),2)}, {round(sum(list_time)/len(list_time),2)}\n')
+                f.write(f'{tempo}, {ins}, {round(sum(list_cost)/len(list_cost),2)}, {list_cost}, {round(sum(list_time)/len(list_time),2)}, {list_time}\n')
