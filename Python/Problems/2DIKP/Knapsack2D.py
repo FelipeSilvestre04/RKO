@@ -24,7 +24,7 @@ import random
 import math
 from typing import List, Tuple, Union
 import sys
-sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
+sys.path.append(os.path.abspath("C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python\\Problems\\2DIKP"))
 from RKO_v2 import RKO
 
 
@@ -962,8 +962,8 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["trousers","shirts","swim","shapes0","shapes1","shapes2","dighe1","dighe2","albano","dagli","mao","marques","fu","jackobs1","jackobs2"]
-    for tempo in [400]:        
+    instancias = ["trousers","shirts","albano","shapes0","shapes1","shapes2","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
+    for tempo in [800]:        
         for ins in instancias:
             list_time = []
             list_cost = []
@@ -971,12 +971,18 @@ if __name__ == '__main__':
                 print(f'Instancia: {ins}, Tentativa: {i+1}')
                 env = Knapsack2D(dataset=ins, tempo=400)
                 solver = RKO(env)
+                # with open('dados_nn.csv', 'a', newline='') as f:
+                #     f.write(f'dados = [ \n')
                 # while True:
-                # #   env.cost(env.decoder(solver.random_keys()))
-                #     start = time.time()
-                #     solver.RVND(solver.random_keys(), None)
-                #     print('\n',round(time.time() - start, 2), 'segundos')
-                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,5,1,1,1,1,1)
+                #     keys = solver.random_keys()
+                #     cost = env.cost(env.decoder(keys))
+                #     # start = time.time()
+                #     # solver.RVND(solver.random_keys(), None)
+                #     # print('\n',round(time.time() - start, 2), 'segundos')
+                #     with open('dados_nn.csv', 'a', newline='') as f:
+                #         f.write(f'[{list(keys)}, {cost}],\n')
+
+                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,6,1,1,1,1,2)
                 list_time.append(round(temp,2))
                 list_cost.append(round(cost*-1,2))
                 
