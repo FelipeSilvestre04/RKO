@@ -1,9 +1,12 @@
 import numpy as np
 import time
+import sys
+import os
+sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
 from RKO_v2 import RKO
 
 def ler_instance(name):
-    path = 'C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\C++\\Instances\\KP\\'
+    path = 'C:\\Users\\felip\\Documents\\GitHub\\RKO\\C++\\Instances\\KP\\'
     
     items = []
     
@@ -98,11 +101,16 @@ if __name__ == '__main__':
     env = KnapsackProblem('kp50.txt')
     solver = RKO(env)
 
-    time_start = time.time()
-    k = 0
-    while time.time() - time_start < 60:
-        k+=1
-        print(k)
-        env.cost(env.decoder(solver.random_keys())) 
+   
+    ks = []
+    for i in range(10):
+        time_start = time.time()
+        k = 0
+        while time.time() - time_start < 10:
+            k+=1
+            print(k)
+            env.cost(env.decoder(solver.random_keys())) 
+        ks.append(k)
+    print(sum(ks)/100)
     cost,sol, temp = solver.solve(50,0.3,0.5,tempo,5,1,1,1,1,1)
         

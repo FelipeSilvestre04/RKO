@@ -21,6 +21,7 @@ class SolutionPool():
         fitness = entry_tuple[0]
         keys = entry_tuple[1]
         # print(f"INSERINDO: {fitness} - {metaheuristic_name} - {tag} - {len(self.pool)}")
+        print(f"\rtempo = {round(time.time() - self.start_time,2)} ", end="")
         with self.lock:
             # print(f"\n{metaheuristic_name} {tag}")  
             if fitness < self.best_pair[0]: 
@@ -41,7 +42,7 @@ class RKO():
         self.LS_type = self.env.LS_type
         self.start_time = time.time()
         self.max_time = self.env.max_time
-        self.rate = 0.1
+        self.rate = 1
         
         
     
@@ -85,12 +86,11 @@ class RKO():
                 idx = random.randint(0, self.__MAX_KEYS - 1)
                 new_keys[idx] = random.random()
                 
-            # print(f"Perturbação: {tipo} - Chave: {len(new_keys) == self.__MAX_KEYS} - Valor: {self.env.cost(self.env.decoder(new_keys))}")
+            
         
         return new_keys
         
     def SwapLS(self, keys):
-        
         if self.LS_type == 'Best':
             
             swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
@@ -104,10 +104,10 @@ class RKO():
             for idx1 in swap_order:
                 for idx2 in reversed(swap_order):
                     
-                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                        return best_keys
-                    if time.time() - self.start_time > self.max_time:
-                        return best_keys
+                    if self.stop_condition(best_cost, "SwapLS", -1):
+                            return best_keys
+
+                           
 
                     k+=1
                     
@@ -118,8 +118,9 @@ class RKO():
                     if new_cost < best_cost:
                         best_keys = new_keys
                         best_cost = new_cost    
-
+            print(k)
             return best_keys
+      
         elif self.LS_type == 'First':
             
             swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
@@ -131,9 +132,7 @@ class RKO():
             for idx1 in swap_order:
                 for idx2 in reversed(swap_order):
                     
-                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                        return best_keys
-                    if time.time() - self.start_time > self.max_time:
+                    if self.stop_condition(best_cost, "SwapLS", -1):
                         return best_keys
                         
                     new_keys = copy.deepcopy(best_keys)
@@ -164,10 +163,9 @@ class RKO():
             k = 0
             for idx in swap_order:
                 for i in range(len(Farey_Squence) - 1):
+                    # print(k, len(Farey_Squence) * len(swap_order))
                     
-                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                        return best_keys
-                    if time.time() - self.start_time > self.max_time:
+                    if self.stop_condition(best_cost, "FareyLS", -1):
                         return best_keys
 
                     k+=1
@@ -179,7 +177,7 @@ class RKO():
                     if new_cost < best_cost:
                         best_keys = new_keys
                         best_cost = new_cost    
- 
+            # print(k)
             return best_keys
         elif self.LS_type == 'First':
             
@@ -192,9 +190,7 @@ class RKO():
             for idx in swap_order:
                 for i in range(len(Farey_Squence) - 1):
                     
-                    if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                        return best_keys
-                    if time.time() - self.start_time > self.max_time:
+                    if self.stop_condition(best_cost, "FareyLS", -1):
                         return best_keys
                         
                     new_keys = copy.deepcopy(best_keys)
@@ -211,30 +207,51 @@ class RKO():
     def InvertLS(self, keys):
         if self.LS_type == 'Best':
             
-            swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
+            swap_order = [i for i in range(int( self.__MAX_KEYS))]
             random.shuffle(swap_order)
+            blocks = []
+            while swap_order:
+                block = []
+                for i in range(int(self.rate * self.__MAX_KEYS)):
+                    if not swap_order:
+                        break
+                    block.append(swap_order[0])
+                    swap_order.pop(0)
+                    
+                blocks.append(block)
+                
+            
+            k = 0
+            inverts = []
+            
+            for i in range(int(1/self.rate)):
+                one_invert = []
+                
+            
             
             best_keys = copy.deepcopy(keys)
             best_cost = self.env.cost(self.env.decoder(best_keys))
-            
+            # print(f"Best Cost: {best_cost}")
             
             k = 0
-            for idx in swap_order:
+            for block in blocks:
+                # print(k, len(swap_order))
                 
-                if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                    return best_keys
-                if time.time() - self.start_time > self.max_time:
+                if self.stop_condition(best_cost, "InvertLS", -1):
                     return best_keys
 
                 k+=1
                 new_keys = copy.deepcopy(best_keys)
-                new_keys[idx] = 1 - new_keys[idx]
+                for idx in block:
+                    new_keys[idx] = 1 - new_keys[idx]
+                
                 new_cost = self.env.cost(self.env.decoder(new_keys))
                 
                 if new_cost < best_cost:
                     best_keys = new_keys
                     best_cost = new_cost    
-
+            # print(best_cost)
+            # print(k)
             return best_keys    
         elif self.LS_type == 'First':
             
@@ -246,9 +263,7 @@ class RKO():
             
             for idx in swap_order:
             
-                if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                    return best_keys
-                if time.time() - self.start_time > self.max_time:
+                if self.stop_condition(best_cost, "InvertLS", -1):
                     return best_keys
                         
                 new_keys = copy.deepcopy(best_keys)
@@ -336,7 +351,10 @@ class RKO():
         # Critério de parada igual ao C++
         max_iter = int(self.__MAX_KEYS * math.exp(-2))
         
-        while iter_count <= (self.rate * max_iter):
+        while iter_count <= (max_iter*self.rate):
+            
+            if self.stop_condition(fitBest, "NM", -1):
+                return xBest
             # print(f"FIT1: {fit1} - FIT2: {fit2} - FIT3: {fit3}")
             shrink = 0
             
@@ -495,7 +513,8 @@ class RKO():
             
             current_neighborhood = random.choice(not_used_nb)
             
-            
+            # print(f"Inicio Neighborhood: {current_neighborhood} - Custo: {best_cost} - processo: {tag}")
+            start = time.time()
             if current_neighborhood == 'SwapLS':
                 new_keys = self.SwapLS(best_keys)
             elif current_neighborhood == 'NelderMeadSearch':               
@@ -506,18 +525,18 @@ class RKO():
                 new_keys = self.InvertLS(best_keys)
                 
             new_cost = self.env.cost(self.env.decoder(new_keys))
-            # print(f"Neighborhood: {current_neighborhood} - Custo: {new_cost} - processo: {tag}")
+            # print(f"Fim Neighborhood: {current_neighborhood} - Custo: {new_cost} - processo: {tag} - tempo: {round(time.time() - start, 2)}s")
             
             if new_cost < best_cost:
                 best_keys = new_keys
                 best_cost = new_cost
-                if self.env.dict_best is not None and best_cost == self.env.dict_best[self.env.instance_name]:
-                    return best_keys
                 not_used_nb = copy.deepcopy(neighborhoods)
                 
             else:
                 not_used_nb.remove(current_neighborhood)
             
+            if self.stop_condition(best_cost, "RVND", -1):
+                return best_keys
         
         return best_keys
             
@@ -628,6 +647,7 @@ class RKO():
     
     def MultiStart(self, tag,  pool): # Multi Start, gera várias soluções aleatórias e aplica a busca local em cada uma delas, retornando a melhor solução encontrada
         metaheuristic_name = "MS"
+        start_time = time.time()
         tempo_max = self.max_time
         keys = self.random_keys()
        
@@ -641,10 +661,10 @@ class RKO():
       
         
         pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
-        if self.best_solution(best_cost, metaheuristic_name, tag):
+        if self.stop_condition(best_cost, metaheuristic_name, tag):
                 return [], best_keys, best_cost
             
-        start_time = time.time()
+        
 
         while time.time() - start_time < tempo_max:
                 k1 = random.sample(list(pool.pool), 1)[0][1]
@@ -664,8 +684,9 @@ class RKO():
                     
                     
                     pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
-                    if self.best_solution(best_cost, metaheuristic_name, tag):
-                            return [], best_keys, best_cost
+                
+                if self.stop_condition(best_cost, metaheuristic_name, tag):
+                        return [], best_keys, best_cost
 
                
 
@@ -679,7 +700,7 @@ class RKO():
         return [], best_keys, final_cost_value
         
 
-    def SimulatedAnnealing(self, SAmax=50, Temperatura=10000, alpha=0.99,  beta_min=0.05, beta_max=0.25, tag = 0, pool=None):
+    def SimulatedAnnealing(self, SAmax=10, Temperatura=1000, alpha=0.95,  beta_min=0.05, beta_max=0.25, tag = 0, pool=None):
         metaheuristic_name = "SA"
         tempo_max = self.max_time
         keys = self.random_keys()
@@ -694,7 +715,7 @@ class RKO():
       
         
         pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
-        if self.best_solution(best_cost, metaheuristic_name, tag):
+        if self.stop_condition(best_cost, metaheuristic_name, tag):
                 return [], best_keys, best_cost
             
         start_time = time.time()
@@ -705,6 +726,7 @@ class RKO():
             while iter_at_temp < SAmax:
                
                 iter_at_temp += 1
+                # print('sa', iter_at_temp, T, best_cost)
 
                 new_keys = self.shaking(keys, beta_min, beta_max)
                 new_solution = self.env.decoder(new_keys)
@@ -718,8 +740,8 @@ class RKO():
                     elapsed_time = time.time() - start_time
                     
                     pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
-                    if self.best_solution(best_cost, metaheuristic_name, tag):
-                            return [], best_keys, best_cost
+                if self.stop_condition(best_cost, metaheuristic_name, tag):
+                        return [], best_keys, best_cost
 
                 if delta <= 0:
                     keys = new_keys
@@ -731,7 +753,20 @@ class RKO():
 
             iter_at_temp = 0
             T = T * alpha
-            keys = self.RVND(pool = pool, keys =keys)
+            keys = self.NelderMeadSearch(pool = pool, keys =keys)
+            new_solution = self.env.decoder(keys)
+            new_cost = self.env.cost(new_solution)
+            # print('SA',new_cost)
+            
+            delta = new_cost - cost
+            
+            if new_cost < best_cost:
+                best_keys = keys
+                best_cost = new_cost
+                elapsed_time = time.time() - start_time
+                
+            pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
+            
 
         final_cost_solution = self.env.decoder(best_keys)
         final_cost_value = self.env.cost(final_cost_solution, True)
@@ -757,7 +792,7 @@ class RKO():
         
         pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
         
-        if self.best_solution(best_cost, metaheuristic_name, tag):
+        if self.stop_condition(best_cost, metaheuristic_name, tag):
                 return [], best_keys, best_cost
 
         while time.time() - start_time < limit_time:
@@ -777,11 +812,12 @@ class RKO():
                 bests_S.append(s2)
 
                 pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
-
-                if self.best_solution(best_cost, metaheuristic_name, tag):
-                        return [], best_keys, best_cost
             else:
                 idx_k += 1
+                
+            
+            if self.stop_condition(best_cost, metaheuristic_name, tag):
+                return [], best_keys, best_cost
 
         final_cost_solution = self.env.decoder(best_keys)
         final_cost_value = self.env.cost(final_cost_solution)
@@ -824,8 +860,8 @@ class RKO():
                     
                     pool.insert((best_fitness_overall, list(best_keys_overall)), metaheuristic_name, tag)
 
-                    if self.best_solution(best_fitness_overall, metaheuristic_name, tag):
-                        return [], best_keys_overall, fitness
+                if self.stop_condition(best_fitness_overall, metaheuristic_name, tag):
+                    return [], best_keys_overall, fitness
             
             evaluated_population.sort(key=lambda x: x[2])
             
@@ -901,7 +937,7 @@ class RKO():
        
 
         return best_keys, best_cost
-    def ILS(self, limit_time, x, tag, pool, beta_min=0.05, beta_max=0.25):
+    def ILS(self, limit_time, x, tag, pool, beta_min=0.1, beta_max=0.5):
         metaheuristic_name = "ILS"
 
         start_time = time.time()
@@ -916,7 +952,7 @@ class RKO():
         
         pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
       
-        if self.best_solution(best_cost, metaheuristic_name, tag):
+        if self.stop_condition(best_cost, metaheuristic_name, tag):
                 return [], best_keys, best_cost
 
         while time.time() - start_time < limit_time:
@@ -936,8 +972,8 @@ class RKO():
                 
                 pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
 
-                if self.best_solution(best_cost, metaheuristic_name, tag):
-                        return [], best_keys, best_cost
+            if self.stop_condition(best_cost, metaheuristic_name, tag):
+                    return [], best_keys, best_cost
 
         final_cost_solution = self.env.decoder(best_keys)
         final_cost_value = self.env.cost(final_cost_solution)
@@ -947,7 +983,11 @@ class RKO():
         return [], best_keys, final_cost_value
 
 
-    def best_solution(self, best_cost, metaheuristic_name, tag):
+    def stop_condition(self, best_cost, metaheuristic_name, tag):
+        if time.time() - self.start_time > self.max_time:
+            print(f"{metaheuristic_name} {tag}: ENCERRADO")
+            
+            return True
         if self.env.dict_best is not None:
             if best_cost == self.env.dict_best[self.env.instance_name]:
                 print(f"Metaheurística {metaheuristic_name} com tag {tag} encontrou a melhor solução: {best_cost}")
@@ -957,11 +997,17 @@ class RKO():
         return False
         
         
-    def solve(self, pop_size, elite_pop, chance_elite, limit_time, n_workers=None,brkga=1, ms=1, sa=1, vns=1, ils=1):
+    def solve(self, pop_size, elite_pop, chance_elite, time_total, n_workers=None,brkga=1, ms=1, sa=1, vns=1, ils=1, restart=1):
+        
+        limit_time = time_total * restart
+        restarts = int(1/restart)
+        # print(restarts)
         
         if n_workers is None:
             n_workers = cpu_count()
         self.max_time = limit_time
+        
+        print(self.max_time)
 
 
         manager = Manager()
@@ -976,49 +1022,52 @@ class RKO():
         lock = manager.Lock()
         processes = []
         tag = 0
-        for _ in range(brkga):
-            p = Process(
-                target=_brkga_worker,
-                args=(self.env, pop_size, elite_pop, chance_elite, shared.pool,tag)
-            )
-            tag += 1
-            processes.append(p)
-            p.start()
-        for _ in range(ms):
-            p = Process(
-                target=_MS_worker,
-                args=(self.env,10000,100,shared.pool,tag)
-            )
-            tag += 1
-            processes.append(p)
-            p.start()
-        for _ in range(sa):
-            p = Process(
-                target=_SA_worker,
-                args=(self.env, pop_size, elite_pop, chance_elite, shared.pool,tag)
-            )
-            tag += 1
-            processes.append(p)
-            p.start()
-        for _ in range(vns):
-            p = Process(
-                target=_VNS_worker,
-                args=(self.env, limit_time,pop_size, shared.pool,tag)
-            )
-            tag += 1
-            processes.append(p)
-            p.start()
-        for _ in range(ils):
-            p = Process(
-                target=_ILS_worker,
-                args=(self.env, limit_time,pop_size, shared.pool,tag)
-            )
-            tag += 1
-            processes.append(p)
-            p.start()
+        for k in range(restarts):
+            self.start_time = time.time()
+            shared.pool.pool = manager.list()
+            for _ in range(brkga):
+                p = Process(
+                    target=_brkga_worker,
+                    args=(self.env, pop_size, elite_pop, chance_elite, shared.pool,tag)
+                )
+                tag += 1
+                processes.append(p)
+                p.start()
+            for _ in range(ms):
+                p = Process(
+                    target=_MS_worker,
+                    args=(self.env,10000,100,shared.pool,tag)
+                )
+                tag += 1
+                processes.append(p)
+                p.start()
+            for _ in range(sa):
+                p = Process(
+                    target=_SA_worker,
+                    args=(self.env, pop_size, elite_pop, chance_elite, shared.pool,tag)
+                )
+                tag += 1
+                processes.append(p)
+                p.start()
+            for _ in range(vns):
+                p = Process(
+                    target=_VNS_worker,
+                    args=(self.env, limit_time,pop_size, shared.pool,tag)
+                )
+                tag += 1
+                processes.append(p)
+                p.start()
+            for _ in range(ils):
+                p = Process(
+                    target=_ILS_worker,
+                    args=(self.env, limit_time,pop_size, shared.pool,tag)
+                )
+                tag += 1
+                processes.append(p)
+                p.start()
 
-        for p in processes:
-            p.join()
+            for p in processes:
+                p.join()
 
         print(shared.pool.best_pair[0], shared.pool.best_pair[2])
 

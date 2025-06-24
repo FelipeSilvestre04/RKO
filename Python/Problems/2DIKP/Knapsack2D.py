@@ -24,8 +24,8 @@ import random
 import math
 from typing import List, Tuple, Union
 import sys
-sys.path.append(os.path.abspath("C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python\\Problems\\2DIKP"))
-from RKO_v2 import RKO
+sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
+from RKO_v3 import RKO
 
 
 def tratar_lista(lista_poligonos, Escala):
@@ -96,7 +96,7 @@ def draw_cutting_area(pieces, area_width, area_height, legenda=None, filename=No
     # salva em arquivo, se solicitado
     if filename:
         plt.savefig(filename, dpi=150)
-    plt.show()
+    # plt.show()
 
 def offset_polygon(vertices, offset):
     """
@@ -447,7 +447,7 @@ def dimensions(dataset: str):
         'dagli':     (65.6,    60.0,    1, [0,2]),
         'mao':       (2058.6, 2550.0,   1, [0,1,2,3]),
         'marques':   (83.6,   104.0,    1, [0,1,2,3]),
-        'shirts':    (63.0,    40.0,    1, [0,2]),
+        'shirts':    (63.13,    40.0,    1, [0,2]),
         'swim':      (6568.0, 5752.0,   1, [0,2]),
         'trousers':  (245.75,   79.0,    1, [0,2]),
     }
@@ -853,7 +853,7 @@ class Knapsack2D():
 
             
 
-    def cost(self, sol, tag = 0):
+    def cost(self, sol, tag = 0, save  =False):
         if tag == 0:
             if tuple(sol) in self.dict_sol:
                 return self.dict_sol[tuple(sol)]
@@ -871,11 +871,13 @@ class Knapsack2D():
                 # if self.lista == []:
                 #     self.plot()
                 pecas = len(self.pecas_posicionadas)    
-                self.reset()    
+                    
                 # print(self.counter, fit)
                 self.dict_sol[tuple(sol)] = fit
-                if fit < -88:
-                    print(fit, pecas, self.max_pecas)
+                if self.lista == [] or save:
+                    # print(fit)
+                    self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                self.reset()
                 return fit
         
         elif tag == 1:
@@ -889,8 +891,7 @@ class Knapsack2D():
                 i+=1
                     
             fit = -1 * self.area_usada()
-            # if self.lista == []:
-                # self.plot()
+            
                     
             self.reset()    
             return fit
@@ -917,8 +918,8 @@ class Knapsack2D():
                 
         
             
-    def plot(self):
-        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura)
+    def plot(self, legenda):
+        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DIKP\\{self.instance_name}_{random.randint(0,500)}.png')
     
         
     def area_usada(self):
@@ -962,14 +963,15 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["trousers","shirts","albano","shapes0","shapes1","shapes2","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
-    for tempo in [800]:        
+    instancias = ["trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim","shirts"]
+    for tempo in [400]:        
         for ins in instancias:
             list_time = []
             list_cost = []
             for i in range(5):
                 print(f'Instancia: {ins}, Tentativa: {i+1}')
-                env = Knapsack2D(dataset=ins, tempo=400)
+                env = Knapsack2D(dataset=ins, tempo=tempo)
+                print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                 solver = RKO(env)
                 # with open('dados_nn.csv', 'a', newline='') as f:
                 #     f.write(f'dados = [ \n')
@@ -982,7 +984,8 @@ if __name__ == '__main__':
                 #     with open('dados_nn.csv', 'a', newline='') as f:
                 #         f.write(f'[{list(keys)}, {cost}],\n')
 
-                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,6,1,1,1,1,2)
+                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,8,2,1,1,2,2)
+                cost = env.cost(env.decoder(sol), save=True)
                 list_time.append(round(temp,2))
                 list_cost.append(round(cost*-1,2))
                 

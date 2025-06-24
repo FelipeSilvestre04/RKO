@@ -42,7 +42,7 @@ class RKO():
         self.LS_type = self.env.LS_type
         self.start_time = time.time()
         self.max_time = self.env.max_time
-        self.rate = 0.1
+        self.rate = 1
         
         
     
@@ -91,72 +91,72 @@ class RKO():
         return new_keys
         
     def SwapLS(self, keys):
-        # if self.LS_type == 'Best':
-            
-        #     swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
-        #     random.shuffle(swap_order)
-            
-        #     best_keys = copy.deepcopy(keys)
-        #     best_cost = self.env.cost(self.env.decoder(best_keys))
-            
-            
-        #     k = 0
-        #     for idx1 in swap_order:
-        #         for idx2 in reversed(swap_order):
-                    
-        #             if self.stop_condition(best_cost, "SwapLS", -1):
-        #                     return best_keys
-
-                           
-
-        #             k+=1
-                    
-        #             new_keys = copy.deepcopy(best_keys)
-        #             new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
-        #             new_cost = self.env.cost(self.env.decoder(new_keys))
-                    
-        #             if new_cost < best_cost:
-        #                 best_keys = new_keys
-        #                 best_cost = new_cost    
-        #     print(k)
-        #     return best_keys
-        
         if self.LS_type == 'Best':
-            swaps = math.ceil(1/self.rate)
-            swaps_orders = []
-            for _ in range(swaps):
-                swap_order = [i for i in range(int(self.__MAX_KEYS))]
-                random.shuffle(swap_order)
-                swaps_orders.append(swap_order)
+            
+            swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
+            random.shuffle(swap_order)
             
             best_keys = copy.deepcopy(keys)
             best_cost = self.env.cost(self.env.decoder(best_keys))
             
             
             k = 0
-            for i in range(swaps):
-                # print(i, swaps)
+            for idx1 in swap_order:
+                for idx2 in reversed(swap_order):
+                    
+                    if self.stop_condition(best_cost, "SwapLS", -1):
+                            return best_keys
+
+                           
+
+                    k+=1
+                    
+                    new_keys = copy.deepcopy(best_keys)
+                    new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
+                    new_cost = self.env.cost(self.env.decoder(new_keys))
+                    
+                    if new_cost < best_cost:
+                        best_keys = new_keys
+                        best_cost = new_cost    
+            print(k)
+            return best_keys
+        
+        # if self.LS_type == 'Best':
+        #     swaps = math.ceil(1/self.rate)
+        #     swaps_orders = []
+        #     for _ in range(swaps):
+        #         swap_order = [i for i in range(int(self.__MAX_KEYS))]
+        #         random.shuffle(swap_order)
+        #         swaps_orders.append(swap_order)
+            
+        #     best_keys = copy.deepcopy(keys)
+        #     best_cost = self.env.cost(self.env.decoder(best_keys))
+            
+            
+        #     k = 0
+        #     for i in range(swaps):
+        #         # print(i, swaps)
 
             
                 
-                if self.stop_condition(best_cost, "SwapLS", -1):
-                    return best_keys
+        #         if self.stop_condition(best_cost, "SwapLS", -1):
+        #             return best_keys
 
-                k+=1
+        #         k+=1
                 
-                new_keys = copy.deepcopy(best_keys)
-                for _ in range(swaps):
-                    idx1 = swaps_orders[_][i]
-                    idx2 = swaps_orders[_][-(i + 1)]
-                    new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
+        #         new_keys = copy.deepcopy(best_keys)
+        #         for _ in range(swaps):
+        #             idx1 = swaps_orders[_][i]
+        #             idx2 = swaps_orders[_][-(i + 1)]
+        #             new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
                 
-                new_cost = self.env.cost(self.env.decoder(new_keys))
+        #         new_cost = self.env.cost(self.env.decoder(new_keys))
                 
-                if new_cost < best_cost:
-                    best_keys = new_keys
-                    best_cost = new_cost    
-            # print(k)
-            return best_keys
+        #         if new_cost < best_cost:
+        #             best_keys = new_keys
+        #             best_cost = new_cost    
+        #     # print(k)
+        #     return best_keys
         elif self.LS_type == 'First':
             
             swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
@@ -567,6 +567,7 @@ class RKO():
                 best_keys = new_keys
                 best_cost = new_cost
                 not_used_nb = copy.deepcopy(neighborhoods)
+                pool.insert((best_cost, list(best_keys)), "RVND", -1)
                 
             else:
                 not_used_nb.remove(current_neighborhood)
@@ -1055,6 +1056,10 @@ class RKO():
         
         
         shared.pool = SolutionPool(20, shared.best_pool, shared.best_pair, lock=manager.Lock())
+        for i in range(20):
+            keys = self.random_keys()
+            cost = self.env.cost(self.env.decoder(keys))
+            shared.pool.insert((cost, list(keys)), 'pool', -1)
         lock = manager.Lock()
         processes = []
         tag = 0
