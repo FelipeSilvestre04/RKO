@@ -23,7 +23,8 @@ from matplotlib.patches import Polygon as MPolygon, Rectangle
 import random
 import math
 from typing import List, Tuple, Union
-from RKO import RKO
+sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
+from RKO_v2 import RKO
 
 
 def tratar_lista(lista_poligonos, Escala):
@@ -432,22 +433,40 @@ def projetar_vertices_em_poligono(poligono_principal, lista_poligonos):
 
 def dimensions(dataset: str):   
 
+    # specs = {
+    #     'fu':        (34.0,    38.0,    1, [0,1,2,3]),
+    #     'jackobs1':  (13.0,    40.0,    1, [0,1,2,3]),
+    #     'jackobs2':  (28.2,    70.0,    1, [0,1,2,3]),
+    #     'shapes0':   (63.0,    40.0,    1, [0]),
+    #     'shapes1':   (59.0,    40.0,    1, [0,2]),
+    #     'shapes2':   (27.3,    15.0,    1, [0,2]),
+    #     'dighe1':    (138.14,  100.0,    1, [0]),
+    #     'dighe2':    (134.5,  100.0,    1, [0]),
+    #     'albano':    (10122.63, 4900.0,  1, [0,2]),
+    #     'dagli':     (65.6,    60.0,    1, [0,2]),
+    #     'mao':       (2058.6, 2550.0,   1, [0,1,2,3]),
+    #     'marques':   (83.6,   104.0,    1, [0,1,2,3]),
+    #     'shirts':    (63.0,    40.0,    1, [0,2]),
+    #     'swim':      (6568.0, 5752.0,   1, [0,2]),
+    #     'trousers':  (245.75,   79.0,    1, [0,2]),
+    # }
+
     specs = {
-        'fu':        (34.0,    38.0,    1, [0,1,2,3]),
-        'jackobs1':  (13.0,    40.0,    1, [0,1,2,3]),
-        'jackobs2':  (28.2,    70.0,    1, [0,1,2,3]),
-        'shapes0':   (63.0,    40.0,    1, [0]),
-        'shapes1':   (59.0,    40.0,    1, [0,2]),
-        'shapes2':   (27.3,    15.0,    1, [0,2]),
-        'dighe1':    (138.14,  100.0,    1, [0]),
-        'dighe2':    (134.5,  100.0,    1, [0]),
-        'albano':    (10122.63, 4900.0,  1, [0,2]),
-        'dagli':     (65.6,    60.0,    1, [0,2]),
-        'mao':       (2058.6, 2550.0,   1, [0,1,2,3]),
-        'marques':   (83.6,   104.0,    1, [0,1,2,3]),
-        'shirts':    (63.0,    40.0,    1, [0,2]),
-        'swim':      (6568.0, 5752.0,   1, [0,2]),
-        'trousers':  (245.75,   79.0,    1, [0,2]),
+        'fu':        (38.0,    38.0,    1, [0,1,2,3]),
+        'jackobs1':  (40.0,    40.0,    1, [0,1,2,3]),
+        'jackobs2':  (70.0,    70.0,    1, [0,1,2,3]),
+        'shapes0':   (40.0,    40.0,    1, [0]),
+        'shapes1':   (40.0,    40.0,    1, [0,2]),
+        'shapes2':   (15.0,    15.0,    1, [0,2]),
+        'dighe1':    (100.0,  100.0,    1, [0]),
+        'dighe2':    (100.0,  100.0,    1, [0]),
+        'albano':    (4900.0, 4900.0,  1, [0,2]),
+        'dagli':     (60.0,    60.0,    1, [0,2]),
+        'mao':       (2550.0, 2550.0,   1, [0,1,2,3]),
+        'marques':   (104.0,   104.0,    1, [0,1,2,3]),
+        'shirts':    (40.0,    40.0,    1, [0,2]),
+        'swim':      (5752.0, 5752.0,   1, [0,2]),
+        'trousers':  (79.0,   79.0,    1, [0,2]),
     }
 
     return specs.get(dataset, (None, None, None, None))
@@ -498,10 +517,13 @@ def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     y_rot = x * sin_a + y * cos_a
     return x_rot, y_rot
 class SPP2D():
-    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tipo = 0):
+    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tipo = 1, tempo = 400):
         self.dataset = dataset    
         self.instance_name = dataset
         self.tipo = tipo
+        
+        self.max_time = tempo
+        self.start_time = time.time()
         if Base == None and Altura == None and Escala == None:
             self.base, self.altura, self.escala, self.graus = dimensions(dataset)
         else:
@@ -510,7 +532,7 @@ class SPP2D():
             self.escala = Escala
             self.graus = Graus
         
-        self.base*=2    
+        self.altura*=20    
         self.area = self.base * self.altura
         
         lista = ler_poligonos(self.dataset)
@@ -569,13 +591,16 @@ class SPP2D():
 
         # }
         self.regras = {
-            0: self.BL,
-            1: self.UL,
+            0: self.LB,
+            1: self.RB,
             
 
         }
-        self.tam_solution = 3 * self.max_pecas
+        self.tam_solution = 1 * self.max_pecas
         self.greedy = []
+      
+        self.LS_type = 'Best'
+      
 #         self.dict_best ={
 #     "fu": -83.82,
 #     "jackobs1": -75.38,
@@ -859,7 +884,7 @@ class SPP2D():
 
             
 
-    def cost(self, sol):
+    def cost(self, sol, save = False):
         tag = self.tipo
         if tag == 0:
             rot = sol[:self.max_pecas]
@@ -888,8 +913,9 @@ class SPP2D():
                 i+=1
                     
             fit = -1 * self.area_usada()
-            # if self.lista == []:
-                # self.plot()
+            # if True:
+            #     # print(fit)
+            #     self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
                     
             self.reset()    
             return fit
@@ -907,7 +933,7 @@ class SPP2D():
             
             fit = -1 * self.area_usada()
             # if self.lista == []:
-            # self.plot()    
+            #     self.plot(fit)    
             self.reset()    
             return fit
                     
@@ -915,8 +941,14 @@ class SPP2D():
                 
         
             
-    def plot(self):
-        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura)
+    def plot(self,legenda=None):
+        coords = []
+        for pol in self.pecas_posicionadas:
+            for x,y in pol:
+                coords.append(y)
+        
+        larg = max(coords) - min(coords)
+        draw_cutting_area(self.pecas_posicionadas, self.base, larg,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DISPP\\{self.instance_name}_{random.randint(0,500)}.png')
     
         
     def area_usada(self):
@@ -938,10 +970,10 @@ class SPP2D():
         coords = []
         for pol in self.pecas_posicionadas:
             for x,y in pol:
-                coords.append(x)
+                coords.append(y)
         
         larg = max(coords) - min(coords)
-        area_bin = (larg / self.escala) * (self.altura / self.escala)
+        area_bin = (larg / self.escala) * (self.base / self.escala)
         # area_bin = (self.base / self.escala) * (self.altura / self.escala)
 
         return round((area_total / area_bin) * 100, 2) 
@@ -960,15 +992,31 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","dighe1","dighe2","albano","dagli","mao","marques","shirts","swim","trousers"]
-    tipos = [2,0,1]
-    for tipo in tipos:
-        for i in range(5):
-            for ins in instancias:
-                env = SPP2D(dataset=ins, tipo=tipos)
+    instancias = ["shirts","trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
+    for tempo in [400]:        
+        for ins in instancias:
+            list_time = []
+            list_cost = []
+            for i in range(5):
+                print(f'Instancia: {ins}, Tentativa: {i+1}')
+                env = SPP2D(dataset=ins, tempo=tempo)
+                print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                 solver = RKO(env)
-                cost = solver.solve(50,0.3,0.5,300,6,2,0,0,2,2)
-                print(cost * -1)
+                # with open('dados_nn.csv', 'a', newline='') as f:
+                    # f.write(f'dados = [ \n')
+                # while True:
+                #     # keys = solver.random_keys()
+                #     # cost = env.cost(env.decoder(keys))
+                #     start = time.time()
+                #     solver.NelderMeadSearch(solver.random_keys(), None)
+                #     print('\n',round(time.time() - start, 2), 'segundos')
+                #     # with open('dados_nn.csv', 'a', newline='') as f:
+                #         # f.write(f'[{list(keys)}, {cost}],\n')
+
+                cost,sol, temp = solver.solve(100,0.2,0.7,tempo,8,brkga=2,ms=1,sa=1,vns=2,ils=2)
+                cost = env.cost(env.decoder(sol), save=True)
+                list_time.append(round(temp,2))
+                list_cost.append(round(cost*-1,2))
                 
-                with open('testes_RKO.csv', 'a', newline='') as f:
-                    f.write(f'{tipo}, {i}, {ins}, {cost*-1}\n')
+            with open('testes_RKO.csv', 'a', newline='') as f:
+                f.write(f'{tempo}, {ins}, {round(sum(list_cost)/len(list_cost),2)}, {list_cost}, {round(sum(list_time)/len(list_time),2)}, {list_time}\n')

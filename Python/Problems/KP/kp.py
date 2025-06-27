@@ -39,6 +39,14 @@ class KnapsackProblem:
         self.max_time = 50
 
         self.dict_best = None
+        
+        self.SA_parameters_list = [
+        [250.0, 500.0, 750.0],   # SAmax
+        [0.97, 0.99, 0.99],      # alphaSA
+        [0.03, 0.04, 0.05],      # betaMin
+        [0.08, 0.09, 0.10],      # betaMax
+        [100000.0]               # T0
+    ]
 
     def decoder(self, keys):
 
@@ -102,15 +110,15 @@ if __name__ == '__main__':
     solver = RKO(env)
 
    
-    ks = []
-    for i in range(10):
-        time_start = time.time()
-        k = 0
-        while time.time() - time_start < 10:
-            k+=1
-            print(k)
-            env.cost(env.decoder(solver.random_keys())) 
-        ks.append(k)
-    print(sum(ks)/100)
-    cost,sol, temp = solver.solve(50,0.3,0.5,tempo,5,1,1,1,1,1)
+    # ks = []
+    # for i in range(10):
+    #     time_start = time.time()
+    #     k = 0
+    #     while time.time() - time_start < 10:
+    #         k+=1
+    #         print(k)
+    #         env.cost(env.decoder(solver.random_keys())) 
+    #     ks.append(k)
+    # print(sum(ks)/100)
+    cost,sol, temp = solver.solve(5000,0.3,0.5,tempo,8,2,1,1,2,2)
         

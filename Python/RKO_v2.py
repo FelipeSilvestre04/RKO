@@ -86,7 +86,7 @@ class RKO():
                 idx = random.randint(0, self.__MAX_KEYS - 1)
                 new_keys[idx] = random.random()
                 
-            
+            # print(f"Perturbação: {tipo} - Chave: {len(new_keys) == self.__MAX_KEYS} - Valor: {self.env.cost(self.env.decoder(new_keys))}")
         
         return new_keys
         
@@ -118,7 +118,7 @@ class RKO():
                     if new_cost < best_cost:
                         best_keys = new_keys
                         best_cost = new_cost    
-            print(k)
+            # print(k)
             return best_keys
       
         elif self.LS_type == 'First':
@@ -531,6 +531,7 @@ class RKO():
                 best_keys = new_keys
                 best_cost = new_cost
                 not_used_nb = copy.deepcopy(neighborhoods)
+                pool.insert((best_cost, list(best_keys)), "RVND", -1)
                 
             else:
                 not_used_nb.remove(current_neighborhood)
@@ -1019,6 +1020,10 @@ class RKO():
         
         
         shared.pool = SolutionPool(20, shared.best_pool, shared.best_pair, lock=manager.Lock())
+        for i in range(20):
+            keys = self.random_keys()
+            cost = self.env.cost(self.env.decoder(keys))
+            shared.pool.insert((cost, list(keys)), 'pool', -1)
         lock = manager.Lock()
         processes = []
         tag = 0

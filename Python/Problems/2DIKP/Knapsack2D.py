@@ -25,7 +25,7 @@ import math
 from typing import List, Tuple, Union
 import sys
 sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
-from RKO_v3 import RKO
+from RKO_v2 import RKO
 
 
 def tratar_lista(lista_poligonos, Escala):
@@ -587,6 +587,41 @@ class Knapsack2D():
     "trousers": -88.63
 }
         
+    
+        self.dict_feasible = {}
+        
+
+        self.BRKGA_parameters_list = [
+            [300.0, 400.0, 500.0],  # p
+            [0.10, 0.15, 0.20],     # pe
+            [0.10, 0.15, 0.20],     # pm
+            [0.60, 0.65, 0.70]      # rhoe
+        ]
+
+        self.SA_parameters_list = [
+            [250.0, 500.0, 750.0],   # SAmax
+            [0.97, 0.99, 0.99],      # alphaSA
+            [0.03, 0.04, 0.05],      # betaMin
+            [0.08, 0.09, 0.10],      # betaMax
+            [100000.0]               # T0
+        ]
+        
+        self.ILS_parameters_list = [
+            [0.05, 0.10, 0.15], # betaMin
+            [0.15, 0.20, 0.25]  # betaMax
+        ]
+
+        self.VNS_parameters_list = [
+            [5.0, 8.0, 10.0],   # kMax
+            [0.02, 0.04, 0.05]  # betaMin
+        ]
+
+
+
+
+
+    
+        
     def acao(self,peca,x,y,grau_idx):
         peca_posicionar = self.rot_pol(peca, grau_idx)
 
@@ -695,35 +730,44 @@ class Knapsack2D():
         return ocupado    
     
     def feasible(self, peca, grau_indice, area=False):
-        ifp_coords = self.ifp(peca,grau_indice)
-        if not ifp_coords:
-            return []
         
-        if len(self.pecas_posicionadas) == 0:
-            return ifp_coords
+        chave = tuple([peca, grau_indice, tuple([tuple(peca) for peca in self.pecas_posicionadas])])
+        # print(chave)
         
-        nfp_coords = self.nfp(peca, grau_indice)
-        
-        intersec = Polygon(ifp_coords).boundary.intersection(nfp_coords.boundary)
-        pts = []
-        if intersec.geom_type == 'Point':
-            pts = [(intersec.x, intersec.y)]
+        if chave in self.dict_feasible:
+            # self.plot(chave)
+            return self.dict_feasible[chave]
         else:
-            for part in getattr(intersec, 'geoms', [intersec]):
-                if hasattr(part, 'coords'):
-                    for x, y in part.coords:
-                        pts.append((x, y))
-     
-        encaixes = Polygon(ifp_coords).difference(nfp_coords)
-       
-        vertices = extrair_vertices(encaixes)
-        for cor in pts:
-            vertices.append(cor)
+            ifp_coords = self.ifp(peca,grau_indice)
+            if not ifp_coords:
+                return []
+            
+            if len(self.pecas_posicionadas) == 0:
+                return ifp_coords
+            
+            nfp_coords = self.nfp(peca, grau_indice)
+            
+            intersec = Polygon(ifp_coords).boundary.intersection(nfp_coords.boundary)
+            pts = []
+            if intersec.geom_type == 'Point':
+                pts = [(intersec.x, intersec.y)]
+            else:
+                for part in getattr(intersec, 'geoms', [intersec]):
+                    if hasattr(part, 'coords'):
+                        for x, y in part.coords:
+                            pts.append((x, y))
+        
+            encaixes = Polygon(ifp_coords).difference(nfp_coords)
+        
+            vertices = extrair_vertices(encaixes)
+            for cor in pts:
+                vertices.append(cor)
 
-        if area:
-            return vertices, encaixes.area
-        else:
-            return vertices   
+            self.dict_feasible[chave] = vertices
+            if area:
+                return vertices, encaixes.area
+            else:
+                return vertices   
         
         
     def BL(self, peca, grau_indice):
@@ -963,7 +1007,7 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim","shirts"]
+    instancias = ["shirts","trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
     for tempo in [400]:        
         for ins in instancias:
             list_time = []
@@ -974,17 +1018,17 @@ if __name__ == '__main__':
                 print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                 solver = RKO(env)
                 # with open('dados_nn.csv', 'a', newline='') as f:
-                #     f.write(f'dados = [ \n')
+                    # f.write(f'dados = [ \n')
                 # while True:
-                #     keys = solver.random_keys()
-                #     cost = env.cost(env.decoder(keys))
-                #     # start = time.time()
-                #     # solver.RVND(solver.random_keys(), None)
-                #     # print('\n',round(time.time() - start, 2), 'segundos')
-                #     with open('dados_nn.csv', 'a', newline='') as f:
-                #         f.write(f'[{list(keys)}, {cost}],\n')
+                #     # keys = solver.random_keys()
+                #     # cost = env.cost(env.decoder(keys))
+                #     start = time.time()
+                #     solver.NelderMeadSearch(solver.random_keys(), None)
+                #     print('\n',round(time.time() - start, 2), 'segundos')
+                #     # with open('dados_nn.csv', 'a', newline='') as f:
+                #         # f.write(f'[{list(keys)}, {cost}],\n')
 
-                cost,sol, temp = solver.solve(50,0.3,0.5,tempo,8,2,1,1,2,2)
+                cost,sol, temp = solver.solve(100,0.2,0.7,tempo,8,brkga=2,ms=1,sa=1,vns=2,ils=2)
                 cost = env.cost(env.decoder(sol), save=True)
                 list_time.append(round(temp,2))
                 list_cost.append(round(cost*-1,2))

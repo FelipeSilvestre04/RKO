@@ -42,7 +42,7 @@ class RKO():
         self.LS_type = self.env.LS_type
         self.start_time = time.time()
         self.max_time = self.env.max_time
-        self.rate = 1
+        self.rate = 0.1
         
         
     
@@ -120,43 +120,7 @@ class RKO():
                         best_cost = new_cost    
             print(k)
             return best_keys
-        
-        # if self.LS_type == 'Best':
-        #     swaps = math.ceil(1/self.rate)
-        #     swaps_orders = []
-        #     for _ in range(swaps):
-        #         swap_order = [i for i in range(int(self.__MAX_KEYS))]
-        #         random.shuffle(swap_order)
-        #         swaps_orders.append(swap_order)
-            
-        #     best_keys = copy.deepcopy(keys)
-        #     best_cost = self.env.cost(self.env.decoder(best_keys))
-            
-            
-        #     k = 0
-        #     for i in range(swaps):
-        #         # print(i, swaps)
-
-            
-                
-        #         if self.stop_condition(best_cost, "SwapLS", -1):
-        #             return best_keys
-
-        #         k+=1
-                
-        #         new_keys = copy.deepcopy(best_keys)
-        #         for _ in range(swaps):
-        #             idx1 = swaps_orders[_][i]
-        #             idx2 = swaps_orders[_][-(i + 1)]
-        #             new_keys[idx1], new_keys[idx2] = new_keys[idx2], new_keys[idx1]
-                
-        #         new_cost = self.env.cost(self.env.decoder(new_keys))
-                
-        #         if new_cost < best_cost:
-        #             best_keys = new_keys
-        #             best_cost = new_cost    
-        #     # print(k)
-        #     return best_keys
+      
         elif self.LS_type == 'First':
             
             swap_order = [i for i in range(int(self.rate * self.__MAX_KEYS))]
@@ -737,7 +701,8 @@ class RKO():
         return [], best_keys, final_cost_value
         
 
-    def SimulatedAnnealing(self, SAmax=10, Temperatura=1000, alpha=0.95,  beta_min=0.05, beta_max=0.25, tag = 0, pool=None):
+    def SimulatedAnnealing(self,QAgente, tag = 0, pool=None, ):
+        
         metaheuristic_name = "SA"
         tempo_max = self.max_time
         keys = self.random_keys()
@@ -754,16 +719,49 @@ class RKO():
         pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
         if self.stop_condition(best_cost, metaheuristic_name, tag):
                 return [], best_keys, best_cost
-            
+        if True:
+        # 1. Obter os PARÂMETROS INICIAIS do SA do agente Q-Learning
+        # A primeira chamada a QTableAction() usa o estado inicial aleatório do agente.
+            chosen_sa_parameters = QAgente.QTableAction()
+            print(chosen_sa_parameters)
+            SAmax = int(chosen_sa_parameters[0])
+            alpha = chosen_sa_parameters[1]
+            beta_min = chosen_sa_parameters[2]
+            beta_max = chosen_sa_parameters[3]
+            Temperatura = chosen_sa_parameters[4]    
+        reward_from_previous_iteration = 0    
+        start_time_mh_ql = time.time()
+        current_runtime_SA = 0.0
         start_time = time.time()
         T = Temperatura
-        iter_at_temp = 0
+        
 
+        k = 0
         while time.time() - start_time < tempo_max:
+            k+=1
+            best_cost_before_ql_phase = best_cost # Captura o melhor custo ANTES desta nova fase para o cálculo da recompensa
+            # print(best_cost_before_ql_phase)
+            if True:
+
+                QAgente.UpdateQTable(reward_from_previous_iteration, current_runtime_SA)
+                # print('entrou')
+                chosen_sa_parameters = QAgente.QTableAction()
+                # print('saiu')
+                print(chosen_sa_parameters)
+                
+
+                SAmax = int(chosen_sa_parameters[0])
+                alpha = chosen_sa_parameters[1]
+                beta_min = chosen_sa_parameters[2]
+                beta_max = chosen_sa_parameters[3]
+                # Temperatura = chosen_sa_parameters[4]
+            iter_at_temp = 0
             while iter_at_temp < SAmax:
-               
+                # print("entrou 2")
+                
                 iter_at_temp += 1
-                # print('sa', iter_at_temp, T, best_cost)
+
+                # print('sa', k,iter_at_temp, T, best_cost)
 
                 new_keys = self.shaking(keys, beta_min, beta_max)
                 new_solution = self.env.decoder(new_keys)
@@ -787,10 +785,12 @@ class RKO():
                     if random.random() < math.exp(-delta / T):
                         keys = new_keys
                         cost = new_cost
-
+            # print("saiu 2")
             iter_at_temp = 0
             T = T * alpha
-            keys = self.NelderMeadSearch(pool = pool, keys =keys)
+            # print("entrou 3")
+            # # keys = self.NelderMeadSearch(pool = pool, keys =keys)
+            # print("saiu 3")
             new_solution = self.env.decoder(keys)
             new_cost = self.env.cost(new_solution)
             # print('SA',new_cost)
@@ -803,6 +803,20 @@ class RKO():
                 elapsed_time = time.time() - start_time
                 
             pool.insert((best_cost, list(best_keys)), metaheuristic_name, tag)
+            
+            current_runtime_SA = time.time() - start_time 
+            
+            if best_cost < best_cost_before_ql_phase: # Se houve melhoria geral nesta fase QL
+                reward_for_this_iteration = 1.0 
+            else:
+                # Recompensa relativa se não houve melhoria no QL-phase
+                if best_cost_before_ql_phase != 0:
+                    reward_for_this_iteration = (best_cost_before_ql_phase - best_cost) / abs(best_cost_before_ql_phase)
+                else:
+                    reward_for_this_iteration = 0.0 # Evita divisão por zero se o custo inicial for 0
+
+            # Armazena a recompensa para a PRÓXIMA iteração (passada para UpdateQTable)
+            reward_from_previous_iteration = reward_for_this_iteration
             
 
         final_cost_solution = self.env.decoder(best_keys)
@@ -1125,6 +1139,8 @@ def _brkga_worker(env, pop_size, elite_pop, chance_elite, pool,tag):
 
 def _MS_worker(env, max_itr, x, pool,tag):
     runner = RKO(env)
+    
+
     _, local_keys, local_best = runner.MultiStart(tag, pool)
     
 
@@ -1147,9 +1163,268 @@ def _ILS_worker(env, limit_time, x, pool, tag):
 
 def _SA_worker(env, pop_size, elite_pop, chance_elite, pool,tag):
     runner = RKO(env)
-    _, local_keys, local_best = runner.SimulatedAnnealing(tag = tag, pool = pool)
+    sa_params_options = env.SA_parameters_list 
+
+    total_run_max_time_for_q_learning = env.max_time 
+
+
+    QAgente_SA = QLearningAgent(
+        mh_parameters_options=sa_params_options,
+        total_run_max_time_for_q_learning=total_run_max_time_for_q_learning
+    )
+ 
+    _, local_keys, local_best = runner.SimulatedAnnealing(tag = tag, pool = pool, QAgente=QAgente_SA)
     
 
       
         
+
+
+    
+
+
+
+import random
+import math
+import itertools # Para gerar combinações de parâmetros (estados)
+
+# --- Funções Auxiliares (Baseadas em Method.h do C++) ---
+# Assegure-se de que estas funções estejam acessíveis (e.g., em um utilitário.py ou no mesmo arquivo)
+def randomico(min_val, max_val):
+    """Gera um número float aleatório entre min_val (inclusive) e max_val (exclusivo)."""
+    return random.uniform(min_val, max_val)
+
+def irandomico(min_val, max_val):
+    """Gera um número inteiro aleatório entre min_val (inclusive) e max_val (inclusive)."""
+    return random.randint(min_val, max_val)
+
+# --- Classe QState (Representa um Estado na Q-Table) ---
+class QState:
+    """
+    Representa um estado no espaço de estados do Q-Learning para uma meta-heurística.
+    Equivalente à struct TState no C++.
+    """
+    def __init__(self, label, parameters_values):
+        self.label = label                        # Identificador único do estado (índice)
+        self.par = parameters_values              # Lista de valores de parâmetros (ex: [p, pe, pm, rhoe])
+        self.Ai = []                              # Lista de índices de estados alcançáveis (ações)
+        self.Qa = []                              # Lista de Q-values, Qa[j] é o Q-value para a ação Ai[j]
+        
+        # Inicialização para garantir que os atributos existam, serão preenchidos depois
+        self.maxQ = 0.0
+        self.maxA_idx = 0 
+        
+        # Atributos adicionais do TState do C++, se forem usados para algo além de debug
+        self.ci = 0
+        self.numN = 0
+        self.sumQ = 0.0 # Será atualizado junto com Qa
+
+    def add_action(self, next_state_label, initial_q_value):
+        """Adiciona uma ação possível a partir deste estado."""
+        self.Ai.append(next_state_label)
+        self.Qa.append(initial_q_value)
+        # Atualiza maxQ e maxA_idx se este novo Q-value for maior
+        if initial_q_value > self.maxQ:
+            self.maxQ = initial_q_value
+            self.maxA_idx = len(self.Qa) - 1 # Índice da ação recém-adicionada
+
+    def update_q_value_for_action(self, action_idx_in_Ai, reward, learning_rate, discount_factor, next_state_maxQ):
+        """
+        Atualiza o valor Q para uma ação específica e recalcula maxQ/maxA_idx do estado.
+        action_idx_in_Ai: O índice da ação *dentro do vetor self.Ai* do estado atual.
+        """
+        current_q_s_a = self.Qa[action_idx_in_Ai]
+        
+        # Fórmula de atualização do Q-Learning (Equação de Bellman)
+        updated_q_s_a = current_q_s_a + learning_rate * (reward + discount_factor * next_state_maxQ - current_q_s_a)
+        
+        self.Qa[action_idx_in_Ai] = updated_q_s_a
+        
+        # Re-calcular maxQ e maxA_idx após a atualização
+        if self.Qa: # Garante que há ações para evitar erro em caso de lista vazia
+            self.maxQ = max(self.Qa)
+            self.maxA_idx = self.Qa.index(self.maxQ)
+        else:
+            # Isso não deveria acontecer se os estados forem criados corretamente com ações
+            self.maxQ = 0.0
+            self.maxA_idx = 0
+
+# --- Função de Criação de Estados (Baseada em QLearning.h do C++) ---
+def create_q_states_for_mh(parameters_options_for_mh):
+    """
+    Cria todos os estados possíveis para UMA meta-heurística e define suas ações.
+    parameters_options_for_mh: Uma lista de listas, onde cada sub-lista contém os valores
+                               possíveis para um parâmetro da MH.
+                               Ex: [[p1_val1, p1_val2], [p2_val1, p2_val2, p2_val3]]
+    Retorna uma lista de objetos QState.
+    """
+    states_list = []
+    
+    # 1. Gerar todas as combinações de parâmetros (estados)
+    # itertools.product cria um iterador para o produto cartesiano
+    all_combinations = list(itertools.product(*parameters_options_for_mh))
+    
+    # 2. Criar os objetos QState iniciais
+    for i, combo in enumerate(all_combinations):
+        states_list.append(QState(label=i, parameters_values=list(combo))) # Converter tupla para lista
+
+    num_states = len(states_list)
+    num_params_in_state = len(parameters_options_for_mh) # Número de parâmetros por estado
+
+    # 3. Definir ações e inicializar Q-values para cada estado (baseado em distância de Hamming)
+    for i in range(num_states):
+        for j in range(num_states):
+            # Calcular distância de Hamming
+            distance = 0
+            for k in range(num_params_in_state):
+                if states_list[i].par[k] != states_list[j].par[k]:
+                    distance += 1
+            
+            # Uma ação é viável se a distância de Hamming for <= 1
+            if distance <= 1:
+                # Adiciona a ação (que é o índice do próximo estado) e inicializa seu Q-value
+                states_list[i].add_action(next_state_label=states_list[j].label,
+                                          initial_q_value=randomico(0.01, 0.05)) # randomico(0.05,0.01) do C++
+
+    return states_list
+
+# --- Classe QLearningAgent (Seu 'MyQLearning' mais genérico) ---
+class QLearningAgent:
+    """
+    Gerencia o processo de Q-Learning para UMA meta-heurística específica.
+    Cada meta-heurística no RKO terá sua própria instância desta classe.
+    """
+    def __init__(self, mh_parameters_options, total_run_max_time_for_q_learning):
+        """
+        Inicializa o agente Q-Learning para uma meta-heurística.
+        mh_parameters_options: Uma lista de listas de valores de parâmetros para esta MH.
+                               Ex: [[p_opts], [pe_opts], [pm_opts], [rhoe_opts]]
+        total_run_max_time_for_q_learning: O tempo total máximo para a run do RKO, usado para calcular Ti.
+        """
+        self.QTable_states = create_q_states_for_mh(mh_parameters_options)
+
+        
+        # O estado atual é inicializado aleatoriamente entre os estados disponíveis
+        self.ActualState_idx = irandomico(0, len(self.QTable_states) - 1)
+        
+        # Variáveis para controle da atualização da Q-Table
+        self.last_chosen_state_idx = self.ActualState_idx # Guarda o estado de onde a última ação partiu
+        self.last_action_idx_in_Ai = -1 # Guarda o índice da ação no Ai do estado anterior
+
+        # Parâmetros do Q-Learning que serão atualizados dinamicamente
+        self.epsilon = 1.0          # Epsilon inicial (começa em epsilon_max)
+        self.learning_rate = 1.0    # Taxa de aprendizado inicial
+        self.discount_factor = 0.8  # Fator de desconto (fixo, como no C++)
+
+        # Parâmetros de controle de epsilon decay e learning rate decay
+        self.epsilon_max = 1.0
+        self.epsilon_min = 0.1
+        # Ti é 10% do tempo máximo de execução da run do RKO (como no C++)
+        self.Ti = total_run_max_time_for_q_learning * 0.1 
+        self.restart_epsilon_count = 1 # Contador de "épocas" para o restart de epsilon
+        
+        
+
+    def _set_ql_parameters(self, current_runtime_of_mh):
+        """
+        Atualiza os parâmetros de aprendizado do Q-Learning (epsilon, learning_rate).
+        Corresponde à função SetQLParameter do C++. É uma função interna.
+        current_runtime_of_mh: Tempo decorrido desde o início da execução desta MH.
+        """
+        # Epsilon decay com warm restart (baseado em QLearning.h)
+        if current_runtime_of_mh >= self.restart_epsilon_count * self.Ti:
+            self.restart_epsilon_count += 1
+            self.epsilon_max -= 0.1 # Reduz o valor máximo de epsilon gradualmente
+            if self.epsilon_max < self.epsilon_min:
+                self.epsilon_max = self.epsilon_min
+            self.epsilon = self.epsilon_max # Reinicia epsilon para o novo epsilon_max
+        else:
+            # Decaimento em cosseno
+            self.epsilon = self.epsilon_min + 0.5 * (self.epsilon_max - self.epsilon_min) * \
+                           (1 + math.cos(((current_runtime_of_mh % self.Ti) / self.Ti) * math.pi))
+        
+        # Learning rate (alpha) decay (baseado em QLearning.h)
+        self.learning_rate = 1 - (0.9 * current_runtime_of_mh / (self.Ti * 10)) # Aprox. MAXTIME total
+
+    def UpdateQTable(self, reward_from_previous_action, current_runtime_of_mh):
+        """
+        Atualiza a Q-Table com a recompensa da ação ANTERIOR e o estado atual.
+        Corresponde à lógica de atualização dentro das MHs no C++.
+        
+        reward_from_previous_action: A recompensa recebida pela ação tomada na iteração anterior.
+        current_runtime_of_mh: O tempo atual da execução da meta-heurística.
+        """
+        # 1. Primeiro, atualiza os parâmetros do Q-Learning para a iteração ATUAL
+        self._set_ql_parameters(current_runtime_of_mh)
+
+        # 2. Em seguida, aplica a regra de atualização da Q-Table para a AÇÃO ANTERIOR
+        # `self.last_chosen_state_idx` é o `st` (estado anterior de onde a ação partiu)
+        # `self.last_action_idx_in_Ai` é o `at` (índice da ação no vetor Ai do estado anterior)
+        # `self.ActualState_idx` é o `st_1` (o estado para o qual a ação levou na iteração anterior)
+
+        if self.last_action_idx_in_Ai == -1:
+            # Esta é a primeira iteração, não há ação anterior para atualizar.
+       
+            return 
+        
+        # Obter os objetos QState para o estado ANTERIOR e o estado ATUAL (que é o próximo estado)
+        previous_q_state_object = self.QTable_states[self.last_chosen_state_idx]
+        current_q_state_object = self.QTable_states[self.ActualState_idx] # Este é o st_1
+
+        # Obter o valor Q máximo do próximo estado (st_1) para a fórmula de atualização
+        max_q_next_state = current_q_state_object.maxQ
+
+        # Chamar o método de atualização do QState para atualizar o Q-value específico
+        previous_q_state_object.update_q_value_for_action(
+            action_idx_in_Ai=self.last_action_idx_in_Ai,
+            reward=reward_from_previous_action,
+            learning_rate=self.learning_rate,
+            discount_factor=self.discount_factor,
+            next_state_maxQ=max_q_next_state
+        )
+        
+        # self.ActualState_idx já foi atualizado para o 'next_state_label' na chamada anterior de QTableAction
+        # então ele já aponta para o st_1.
+
+    def QTableAction(self):
+        """
+        Escolhe uma ação (próximo estado de parâmetros) usando a política epsilon-greedy.
+        Corresponde à função ChooseAction do C++.
+        
+        Retorna:
+            - chosen_parameters_values: Uma lista dos valores de parâmetros do estado escolhido
+                                        (que se torna o NOVO self.ActualState_idx).
+        """
+        # print("teste")
+        current_q_state = self.QTable_states[self.ActualState_idx]
+        # print(current_q_state)
+        if not current_q_state.Ai:
+            # Caso não haja ações possíveis, retornar os parâmetros do estado atual e não registrar ação
+            print(f"Warning: State {self.ActualState_idx} has no available actions. Returning current parameters.")
+            self.last_action_idx_in_Ai = -1 
+            self.last_chosen_state_idx = self.ActualState_idx
+            return current_q_state.par
+
+        action_taken_idx_in_Ai = 0
+        next_state_label = 0
+
+        # Epsilon-greedy policy
+        if random.uniform(0, 1) <= (1 - self.epsilon):
+            # Explotação: escolher a ação com o maior valor Q (baseado em maxA_idx)
+            action_taken_idx_in_Ai = current_q_state.maxA_idx
+            next_state_label = current_q_state.Ai[action_taken_idx_in_Ai]
+        else:
+            # Exploração: escolher uma ação aleatória
+            action_taken_idx_in_Ai = random.randint(0, len(current_q_state.Ai) - 1)
+            next_state_label = current_q_state.Ai[action_taken_idx_in_Ai]
+        
+        # Salva o estado de onde a ação partiu e o índice da ação para a próxima atualização
+        self.last_chosen_state_idx = self.ActualState_idx
+        self.last_action_idx_in_Ai = action_taken_idx_in_Ai
+
+        # ATUALIZA o estado atual do agente para o próximo estado escolhido
+        self.ActualState_idx = next_state_label
+
+        # Retorna os parâmetros do NOVO estado escolhido para a MH usar
+        return self.QTable_states[self.ActualState_idx].par
 
