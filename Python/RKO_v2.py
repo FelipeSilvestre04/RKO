@@ -150,7 +150,7 @@ class SolutionPool():
                 self.best_pair[1] = list(keys)         
                 self.best_pair[2] = round(self.start_time - time.time(), 2)
                 
-                print(f"\n{metaheuristic_name} {tag} NOVO MELHOR: {fitness} - BEST: {self.best_pair[0]} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}")    
+                print(f"\n{metaheuristic_name} {tag} BEST: {self.best_pair[0]} - Time: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}")    
                                
             bisect.insort(self.pool, entry_tuple) 
             if len(self.pool) > self.size:
