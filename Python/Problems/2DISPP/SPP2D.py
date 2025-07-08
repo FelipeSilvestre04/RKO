@@ -93,9 +93,9 @@ def draw_cutting_area(pieces, area_width, area_height, legenda=None, filename=No
     plt.tight_layout()
 
     # salva em arquivo, se solicitado
-    if filename:
-        plt.savefig(filename, dpi=150)
-    plt.show()
+    # if filename:
+    #     plt.savefig(filename, dpi=150)
+    # plt.show()
 
 def offset_polygon(vertices, offset):
     """
@@ -517,7 +517,7 @@ def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     y_rot = x * sin_a + y * cos_a
     return x_rot, y_rot
 class SPP2D():
-    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tipo = 1, tempo = 400):
+    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tipo = 0, tempo = 400):
         self.dataset = dataset    
         self.instance_name = dataset
         self.tipo = tipo
@@ -596,7 +596,7 @@ class SPP2D():
             
 
         }
-        self.tam_solution = 1 * self.max_pecas
+        self.tam_solution = 2 * self.max_pecas
         self.greedy = []
       
         self.LS_type = 'Best'
@@ -849,7 +849,7 @@ class SPP2D():
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
             regras_idx = []
-            tipos_regras = 8
+            tipos_regras = 2
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
@@ -897,8 +897,9 @@ class SPP2D():
                 # self.plot()
             
             fit = -1 * self.area_usada()
-            # if self.lista == []:
-            # self.plot()    
+            if True:
+                # print(fit)
+                self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")    
             self.reset()    
             return fit
         
@@ -913,9 +914,9 @@ class SPP2D():
                 i+=1
                     
             fit = -1 * self.area_usada()
-            # if True:
-            #     # print(fit)
-            #     self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
+            if True:
+                # print(fit)
+                self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
                     
             self.reset()    
             return fit
@@ -932,8 +933,9 @@ class SPP2D():
                 # self.plot()
             
             fit = -1 * self.area_usada()
-            # if self.lista == []:
-            #     self.plot(fit)    
+            # if True:
+            #     # print(fit)
+            #     self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")   
             self.reset()    
             return fit
                     
@@ -948,7 +950,7 @@ class SPP2D():
                 coords.append(y)
         
         larg = max(coords) - min(coords)
-        draw_cutting_area(self.pecas_posicionadas, self.base, larg,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DISPP\\{self.instance_name}_{random.randint(0,500)}.png')
+        # draw_cutting_area(self.pecas_posicionadas, self.base, larg,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DISPP\\{self.instance_name}_{random.randint(0,500)}.png')
     
         
     def area_usada(self):
@@ -992,12 +994,12 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["shirts","trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
-    for tempo in [400]:        
+    instancias = ["albano","shirts","trousers","shapes2","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
+    for tempo in [1200]:        
         for ins in instancias:
             list_time = []
             list_cost = []
-            for i in range(5):
+            for i in range(3):
                 print(f'Instancia: {ins}, Tentativa: {i+1}')
                 env = SPP2D(dataset=ins, tempo=tempo)
                 print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)

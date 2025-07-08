@@ -482,11 +482,7 @@ def NFP(PecaA,grauA,PecaB,grauB,env):
     #print(nfp_final)
 
     return nfp_final
-# def rotate_point(x, y, angle):
-#     rad = math.radians(angle)
-#     x_new = x * math.cos(rad) - y * math.sin(rad)
-#     y_new = x * math.sin(rad) + y * math.cos(rad)
-#     return x_new, y_new
+
 
 def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     """
@@ -499,6 +495,8 @@ def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     x_rot = x * cos_a - y * sin_a
     y_rot = x * sin_a + y * cos_a
     return x_rot, y_rot
+
+
 class Knapsack2D():
     def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200):
 

@@ -109,16 +109,5 @@ if __name__ == '__main__':
     env = KnapsackProblem('kp50.txt')
     solver = RKO(env)
 
-   
-    # ks = []
-    # for i in range(10):
-    #     time_start = time.time()
-    #     k = 0
-    #     while time.time() - time_start < 10:
-    #         k+=1
-    #         print(k)
-    #         env.cost(env.decoder(solver.random_keys())) 
-    #     ks.append(k)
-    # print(sum(ks)/100)
     cost,sol, temp = solver.solve(5000,0.3,0.5,tempo,8,2,1,1,2,2)
         
