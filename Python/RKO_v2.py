@@ -43,10 +43,10 @@ This implementation successfully transitions the robust, modular, and high-perfo
 
 Additional Metaheuristics:
     To achieve full feature parity with the C++ version, the following metaheuristics need to be implemented:
-        - `GRASP` (Greedy Randomized Adaptive Search Procedure) [cite: 557, 1329]
-        - `GA` (standard Genetic Algorithm using blending) [cite: 536, 1337]
-        - `PSO` (Particle Swarm Optimization) [cite: 586, 1335]
-        - `LNS` (Large Neighborhood Search) [cite: 597, 1338]
+        - `GRASP` (Greedy Randomized Adaptive Search Procedure) 
+        - `GA` (standard Genetic Algorithm using blending)
+        - `PSO` (Particle Swarm Optimization) 
+        - `LNS` (Large Neighborhood Search) 
 
 Online Parameter Control:
     A crucial missing component is the `Q-Learning` module for online parameter control. 
