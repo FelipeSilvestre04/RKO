@@ -24,8 +24,9 @@ import random
 import math
 from typing import List, Tuple, Union
 import sys
-sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
-from RKO_v2 import RKO
+sys.path.append(os.path.abspath("c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
+
+from RKO_v3 import RKO
 
 
 def tratar_lista(lista_poligonos, Escala):
@@ -212,7 +213,7 @@ def multiplicar_tudo(d, multiplicador):
     return novo_dicionario
 
 def ler_poligonos(arquivo, escala=1):
-    with open(arquivo + '.dat', 'r') as f:
+    with open( 'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DIKP\\' + arquivo + '.dat', 'r') as f:
         conteudo = f.read().strip()
 
     # Divide o conteúdo em linhas
@@ -916,7 +917,7 @@ class Knapsack2D():
                     
                 # print(self.counter, fit)
                 self.dict_sol[tuple(sol)] = fit
-                if self.lista == [] or save:
+                if save:
                     # print(fit)
                     self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
                 self.reset()
@@ -1005,31 +1006,14 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["shirts","trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
+    instancias = ["fu","jackobs1","jackobs2","shirts","trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","swim"]
     for tempo in [400]:        
         for ins in instancias:
             list_time = []
             list_cost = []
-            for i in range(5):
-                print(f'Instancia: {ins}, Tentativa: {i+1}')
-                env = Knapsack2D(dataset=ins, tempo=tempo)
-                print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                solver = RKO(env)
-                # with open('dados_nn.csv', 'a', newline='') as f:
-                    # f.write(f'dados = [ \n')
-                # while True:
-                #     # keys = solver.random_keys()
-                #     # cost = env.cost(env.decoder(keys))
-                #     start = time.time()
-                #     solver.NelderMeadSearch(solver.random_keys(), None)
-                #     print('\n',round(time.time() - start, 2), 'segundos')
-                #     # with open('dados_nn.csv', 'a', newline='') as f:
-                #         # f.write(f'[{list(keys)}, {cost}],\n')
+            
+            env = Knapsack2D(dataset=ins, tempo=tempo)
+            print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
+            solver = RKO(env, print=True, save_directory='testes_RKO.csv')
+            cost,sol, temp = solver.solve(100,0.2,0.7,tempo,brkga=1,ms=0,sa=1,vns=2,ils=1, lns=1, pso=0, ga=1, runs=2)
 
-                cost,sol, temp = solver.solve(100,0.2,0.7,tempo,8,brkga=2,ms=1,sa=1,vns=2,ils=2)
-                cost = env.cost(env.decoder(sol), save=True)
-                list_time.append(round(temp,2))
-                list_cost.append(round(cost*-1,2))
-                
-            with open('testes_RKO.csv', 'a', newline='') as f:
-                f.write(f'{tempo}, {ins}, {round(sum(list_cost)/len(list_cost),2)}, {list_cost}, {round(sum(list_time)/len(list_time),2)}, {list_time}\n')
