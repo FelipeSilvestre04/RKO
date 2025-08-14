@@ -500,9 +500,60 @@ def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
 
 class Knapsack2D():
     def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200):
-
+        self.save_q_learning_report = True
         self.counter = 0
+        self.BRKGA_parameters = {
+            'p': [100, 50],          # Tamanho da população
+            'pe': [0.20, 0.15],        # Fração da população que compõe a elite
+            'pm': [0.05],        # Fração da população de mutantes
+            'rhoe': [0.70]       # Probabilidade de herança do alelo do pai de elite
+        }
+        # Exemplo Online: self.BRKGA_parameters = {'p': [300, 400, 500], 'pe': [0.10, 0.15, 0.20], ...}
 
+        # Parâmetros para Simulated Annealing (SA)
+        self.SA_parameters = {
+            'SAmax': [10, 5],     # Número de iterações por temperatura
+            'alphaSA': [0.5, 0.7],   # Fator de resfriamento
+            'betaMin': [0.01, 0.03],   # Intensidade mínima da perturbação (shaking)
+            'betaMax': [0.05, 0.1],   # Intensidade máxima da perturbação (shaking)
+            'T0': [10]      # Temperatura inicial
+        }
+
+        # Parâmetros para Iterated Local Search (ILS)
+        self.ILS_parameters = {
+            'betaMin': [0.10,0.5],   # Intensidade mínima da perturbação (shaking)
+            'betaMax': [0.20,0.15]    # Intensidade máxima da perturbação (shaking)
+        }
+        # Exemplo Online: self.ILS_parameters = {'betaMin': [0.05, 0.10, 0.15], 'betaMax': [0.15, 0.20, 0.25]}
+
+        # Parâmetros para Variable Neighborhood Search (VNS)
+        self.VNS_parameters = {
+            'kMax': [5,3],         # Número máximo de estruturas de vizinhança
+            'betaMin': [0.05, 0.1]    # Fator base para a intensidade da perturbação
+        }
+
+        # Parâmetros para Particle Swarm Optimization (PSO)
+        self.PSO_parameters = {
+            'PSize': [100,50],      # Tamanho do enxame (número de partículas)
+            'c1': [2.05],        # Coeficiente cognitivo
+            'c2': [2.05],        # Coeficiente social
+            'w': [0.73]          # Fator de inércia
+        }
+
+        # Parâmetros para Genetic Algorithm (GA)
+        self.GA_parameters = {
+            'sizePop': [100,50],    # Tamanho da população
+            'probCros': [0.98],  # Probabilidade de crossover
+            'probMut': [0.005, 0.01]   # Probabilidade de mutação
+        }
+
+        # Parâmetros para Large Neighborhood Search (LNS)
+        self.LNS_parameters = {
+            'betaMin': [0.10],   # Intensidade mínima da destruição
+            'betaMax': [0.30],   # Intensidade máxima da destruição
+            'TO': [100],       # Temperatura inicial
+            'alphaLNS': [0.95,0.9]   # Fator de resfriamento
+        }
         self.max_time = tempo
         self.start_time = time.time()
         self.dataset = dataset
@@ -575,7 +626,7 @@ class Knapsack2D():
     "shapes0": -63.33,
     "shapes1": -67.63,
     "shapes2": -79.12,
-    "dighe1": -72.4,
+    "dighe1": -72.39,
     "dighe2": -74.6,
     "albano": -86.06,
     "dagli": -77.31,
@@ -1006,14 +1057,15 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["fu","jackobs1","jackobs2","shirts","trousers","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","swim"]
-    for tempo in [400]:        
-        for ins in instancias:
-            list_time = []
-            list_cost = []
-            
-            env = Knapsack2D(dataset=ins, tempo=tempo)
-            print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-            solver = RKO(env, print=True, save_directory='testes_RKO.csv')
-            cost,sol, temp = solver.solve(100,0.2,0.7,tempo,brkga=1,ms=0,sa=1,vns=2,ils=1, lns=1, pso=0, ga=1, runs=2)
+    instancias = ["fu","shirts","trousers","jackobs1","jackobs2","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","swim"]    
+    for tempo in [400,1200]:    
+        for restart in [0.5, 1]:    
+            for ins in instancias:
+                list_time = []
+                list_cost = []
+                
+                env = Knapsack2D(dataset=ins, tempo=tempo * restart)
+                print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
+                solver = RKO(env, print_best=True, save_directory='c:\\Users\\felip\\Documents\\GitHub\\RKO\\testes_RKO.csv')
+                cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= 0.5,  runs=10)
 
