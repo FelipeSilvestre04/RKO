@@ -23,8 +23,10 @@ from matplotlib.patches import Polygon as MPolygon, Rectangle
 import random
 import math
 from typing import List, Tuple, Union
-sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
-from RKO_v2 import RKO
+import sys
+sys.path.append(os.path.abspath("c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
+
+from RKO_v3 import RKO
 
 
 def tratar_lista(lista_poligonos, Escala):
@@ -92,11 +94,19 @@ def draw_cutting_area(pieces, area_width, area_height, legenda=None, filename=No
 
     plt.tight_layout()
 
-    # salva em arquivo, se solicitado
-    # if filename:
-    #     plt.savefig(filename, dpi=150)
-    # plt.show()
+   
+    directory = os.path.dirname(filename)
 
+    if legenda == '[]':
+        plt.show()
+
+    else:
+        
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        if filename:
+            plt.savefig(filename, dpi=150)
+    
 def offset_polygon(vertices, offset):
     """
     Cria um novo polígono com offset a partir de um polígono original usando Shapely
@@ -211,7 +221,7 @@ def multiplicar_tudo(d, multiplicador):
     return novo_dicionario
 
 def ler_poligonos(arquivo, escala=1):
-    with open(arquivo + '.dat', 'r') as f:
+    with open( 'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DIKP\\' + arquivo + '.dat', 'r') as f:
         conteudo = f.read().strip()
 
     # Divide o conteúdo em linhas
@@ -431,42 +441,24 @@ def projetar_vertices_em_poligono(poligono_principal, lista_poligonos):
     
     return poligono_resultado
 
-def dimensions(dataset: str):   
-
-    # specs = {
-    #     'fu':        (34.0,    38.0,    1, [0,1,2,3]),
-    #     'jackobs1':  (13.0,    40.0,    1, [0,1,2,3]),
-    #     'jackobs2':  (28.2,    70.0,    1, [0,1,2,3]),
-    #     'shapes0':   (63.0,    40.0,    1, [0]),
-    #     'shapes1':   (59.0,    40.0,    1, [0,2]),
-    #     'shapes2':   (27.3,    15.0,    1, [0,2]),
-    #     'dighe1':    (138.14,  100.0,    1, [0]),
-    #     'dighe2':    (134.5,  100.0,    1, [0]),
-    #     'albano':    (10122.63, 4900.0,  1, [0,2]),
-    #     'dagli':     (65.6,    60.0,    1, [0,2]),
-    #     'mao':       (2058.6, 2550.0,   1, [0,1,2,3]),
-    #     'marques':   (83.6,   104.0,    1, [0,1,2,3]),
-    #     'shirts':    (63.0,    40.0,    1, [0,2]),
-    #     'swim':      (6568.0, 5752.0,   1, [0,2]),
-    #     'trousers':  (245.75,   79.0,    1, [0,2]),
-    # }
+def dimensions(dataset: str): 
 
     specs = {
-        'fu':        (38.0,    38.0,    1, [0,1,2,3]),
-        'jackobs1':  (40.0,    40.0,    1, [0,1,2,3]),
-        'jackobs2':  (70.0,    70.0,    1, [0,1,2,3]),
-        'shapes0':   (40.0,    40.0,    1, [0]),
-        'shapes1':   (40.0,    40.0,    1, [0,2]),
-        'shapes2':   (15.0,    15.0,    1, [0,2]),
-        'dighe1':    (100.0,  100.0,    1, [0]),
-        'dighe2':    (100.0,  100.0,    1, [0]),
-        'albano':    (4900.0, 4900.0,  1, [0,2]),
-        'dagli':     (60.0,    60.0,    1, [0,2]),
-        'mao':       (2550.0, 2550.0,   1, [0,1,2,3]),
-        'marques':   (104.0,   104.0,    1, [0,1,2,3]),
-        'shirts':    (40.0,    40.0,    1, [0,2]),
-        'swim':      (5752.0, 5752.0,   1, [0,2]),
-        'trousers':  (79.0,   79.0,    1, [0,2]),
+        'fu':          (34.0,     38.0,     1, [0,1,2,3]),
+        'jackobs1':    (13.0,     40.0,     1, [0,1,2,3]),
+        'jackobs2':    (28.2,     70.0,     1, [0,1,2,3]),
+        'shapes0':     (65.0,     40.0,     1, [0]),
+        'shapes1':     (65.0,     40.0,     1, [0,2]),
+        'shapes2':     (27.3,     15.0,     1, [0,2]),
+        'dighe1':      (138.14,   100.0,    1, [0]),
+        'dighe2':      (134.05,   100.0,    1, [0]),
+        'albano':      (10122.63, 4900.0,   1, [0,2]),
+        'dagli':       (65.6,     60.0,     1, [0,2]),
+        'mao':         (2058.6,   2550.0,   1, [0,1,2,3]),
+        'marques':     (83.6,     104.0,    1, [0,1,2,3]),
+        'shirts':      (63.13,    40.0,     1, [0,2]),
+        'swim':        (6568.0,   5752.0,   1, [0,2]),
+        'trousers':    (245.75,   79.0,     1, [0,2]),
     }
 
     return specs.get(dataset, (None, None, None, None))
@@ -499,11 +491,7 @@ def NFP(PecaA,grauA,PecaB,grauB,env):
     #print(nfp_final)
 
     return nfp_final
-# def rotate_point(x, y, angle):
-#     rad = math.radians(angle)
-#     x_new = x * math.cos(rad) - y * math.sin(rad)
-#     y_new = x * math.sin(rad) + y * math.cos(rad)
-#     return x_new, y_new
+
 
 def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     """
@@ -516,14 +504,77 @@ def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     x_rot = x * cos_a - y * sin_a
     y_rot = x * sin_a + y * cos_a
     return x_rot, y_rot
+def calcular_shrink_factor(x):
+
+    if x < 0.1:
+        return 0.9 - x
+    else:
+        # Para x=0.1, log10(0.1) = -1, resultando em 1 + 0.1*(-1) = 0.9.
+        # Para x=1.0, log10(1.0) = 0, resultando em 1 + 0.1*(0) = 1.0.
+        return 1 + 0.1 * math.log10(x)
+
 class SPP2D():
-    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tipo = 0, tempo = 400):
-        self.dataset = dataset    
-        self.instance_name = dataset
-        self.tipo = tipo
+    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200, decoder = 'D1'):
+        self.decoder_type = decoder
         
+        self.save_q_learning_report = True
+        self.counter = 0
+        self.BRKGA_parameters = {
+            'p': [100, 50],          # Tamanho da população
+            'pe': [0.20, 0.15],        # Fração da população que compõe a elite
+            'pm': [0.05],        # Fração da população de mutantes
+            'rhoe': [0.70]       # Probabilidade de herança do alelo do pai de elite
+        }
+        # Exemplo Online: self.BRKGA_parameters = {'p': [300, 400, 500], 'pe': [0.10, 0.15, 0.20], ...}
+
+        # Parâmetros para Simulated Annealing (SA)
+        self.SA_parameters = {
+            'SAmax': [10, 5],     # Número de iterações por temperatura
+            'alphaSA': [0.5, 0.7],   # Fator de resfriamento
+            'betaMin': [0.01, 0.03],   # Intensidade mínima da perturbação (shaking)
+            'betaMax': [0.05, 0.1],   # Intensidade máxima da perturbação (shaking)
+            'T0': [10]      # Temperatura inicial
+        }
+
+        # Parâmetros para Iterated Local Search (ILS)
+        self.ILS_parameters = {
+            'betaMin': [0.10,0.5],   # Intensidade mínima da perturbação (shaking)
+            'betaMax': [0.20,0.15]    # Intensidade máxima da perturbação (shaking)
+        }
+        # Exemplo Online: self.ILS_parameters = {'betaMin': [0.05, 0.10, 0.15], 'betaMax': [0.15, 0.20, 0.25]}
+
+        # Parâmetros para Variable Neighborhood Search (VNS)
+        self.VNS_parameters = {
+            'kMax': [5,3],         # Número máximo de estruturas de vizinhança
+            'betaMin': [0.05, 0.1]    # Fator base para a intensidade da perturbação
+        }
+
+        # Parâmetros para Particle Swarm Optimization (PSO)
+        self.PSO_parameters = {
+            'PSize': [100,50],      # Tamanho do enxame (número de partículas)
+            'c1': [2.05],        # Coeficiente cognitivo
+            'c2': [2.05],        # Coeficiente social
+            'w': [0.73]          # Fator de inércia
+        }
+
+        # Parâmetros para Genetic Algorithm (GA)
+        self.GA_parameters = {
+            'sizePop': [100,50],    # Tamanho da população
+            'probCros': [0.98],  # Probabilidade de crossover
+            'probMut': [0.005, 0.01]   # Probabilidade de mutação
+        }
+
+        # Parâmetros para Large Neighborhood Search (LNS)
+        self.LNS_parameters = {
+            'betaMin': [0.10],   # Intensidade mínima da destruição
+            'betaMax': [0.30],   # Intensidade máxima da destruição
+            'TO': [100],       # Temperatura inicial
+            'alphaLNS': [0.95,0.9]   # Fator de resfriamento
+        }
         self.max_time = tempo
         self.start_time = time.time()
+        self.dataset = dataset
+        self.instance_name = dataset
         if Base == None and Altura == None and Escala == None:
             self.base, self.altura, self.escala, self.graus = dimensions(dataset)
         else:
@@ -531,9 +582,10 @@ class SPP2D():
             self.altura = Altura
             self.escala = Escala
             self.graus = Graus
-        
-        self.altura*=20    
+            
+        self.base*= 2
         self.area = self.base * self.altura
+        
         
         lista = ler_poligonos(self.dataset)
         lista.sort(
@@ -571,54 +623,94 @@ class SPP2D():
         self.pecas_posicionadas = []
         self.indices_pecas_posicionadas = []
         self.dict_nfps = {}
-        
         # self.regras = {
-        #     0: self.BL,
-        #     1: self.LB,
-        #     2: self.BR,
-        #     3: self.RB,
-        #     4: self.UL,
-        #     5: self.LU,
-        #     6: self.UR,
-        #     7: self.RU,
+        #     0: self.UL,
+        #     1: self.BL,
         # }
+
         
-        # self.regras = {
+
+        self.dict_sol = {}
+        if self.decoder_type == 'D1_A' or self.decoder_type == 'D2_A':
+            self.tam_solution = 2 * self.max_pecas + 1
+            self.regras = {
+            0: self.BL,
+            1: self.LB,
+            2: self.BR,
+            3: self.RB,
+            4: self.UL,
+            5: self.LU,
+            6: self.UR,
+            7: self.RU,
+        }        
+        elif self.decoder_type == 'D1_B' or self.decoder_type == 'D2_B':
+            self.tam_solution = 3 * self.max_pecas + 1
+            self.regras = {
+            0: self.BL,
+            1: self.LB,
+            2: self.BR,
+            3: self.RB,
+            4: self.UL,
+            5: self.LU,
+            6: self.UR,
+            7: self.RU,
+        }
+            
+        elif self.decoder_type == 'D0_A' or self.decoder_type == 'D0':
+            self.tam_solution = 2 * self.max_pecas 
+        #     self.regras = {
         #     0: self.BL,
         #     1: self.LB,
         #     2: self.UL,
         #     3: self.LU,
 
-        # }
-        self.regras = {
-            0: self.LB,
-            1: self.RB,
-            
+        # }   
+            self.regras = {
+            0: self.BL,
+            1: self.UL,
+
+        }   
+        elif self.decoder_type == 'D0_B':
+            self.tam_solution = 3 * self.max_pecas
+            self.regras = {
+            0: self.UL,
+            1: self.LB,
+            2: self.BL,
+            3: self.LU,
 
         }
-        self.tam_solution = 2 * self.max_pecas
-        self.greedy = []
-      
+            
         self.LS_type = 'Best'
-      
-#         self.dict_best ={
-#     "fu": -83.82,
-#     "jackobs1": -75.38,
-#     "jackobs2": -68.44,
-#     "shapes0": -63.33,
-#     "shapes1": -67.63,
-#     "shapes2": -79.12,
-#     "dighe1": -72.4,
-#     "dighe2": -74.6,
-#     "albano": -86.06,
-#     "dagli": -77.31,
-#     "mao": -71.6,
-#     "marques": -82.74,
-#     "shirts": -85.54,
-#     "swim": -67.35,
-#     "trousers": -88.63
-# }
-        self.dict_best = None
+        self.greedy = []
+        self.dict_best = {
+                    "fu": -92.41,
+                    "jackobs1": -89.10,
+                    "jackobs2": -87.73,
+                    "shapes0": -68.79,
+                    "shapes1": -76.73,
+                    "shapes2": -84.84,
+                    "dighe1": -100.00,
+                    "dighe2": -100.00,
+                    "albano": -89.58,
+                    "dagli": -89.51,
+                    "mao": -85.44,
+                    "marques": -90.59,
+                    "shirts": -88.96,
+                    "swim": -75.94,
+                    "trousers": -91.00
+                }
+        
+    
+        self.dict_feasible = {}
+        
+
+
+
+
+
+
+    
+        
     def acao(self,peca,x,y,grau_idx):
         peca_posicionar = self.rot_pol(peca, grau_idx)
 
@@ -727,35 +819,44 @@ class SPP2D():
         return ocupado    
     
     def feasible(self, peca, grau_indice, area=False):
-        ifp_coords = self.ifp(peca,grau_indice)
-        if not ifp_coords:
-            return []
         
-        if len(self.pecas_posicionadas) == 0:
-            return ifp_coords
+        chave = tuple([peca, grau_indice, tuple([tuple(peca) for peca in self.pecas_posicionadas])])
+        # print(chave)
         
-        nfp_coords = self.nfp(peca, grau_indice)
-        
-        intersec = Polygon(ifp_coords).boundary.intersection(nfp_coords.boundary)
-        pts = []
-        if intersec.geom_type == 'Point':
-            pts = [(intersec.x, intersec.y)]
+        if chave in self.dict_feasible:
+            # self.plot(chave)
+            return self.dict_feasible[chave]
         else:
-            for part in getattr(intersec, 'geoms', [intersec]):
-                if hasattr(part, 'coords'):
-                    for x, y in part.coords:
-                        pts.append((x, y))
-     
-        encaixes = Polygon(ifp_coords).difference(nfp_coords)
-       
-        vertices = extrair_vertices(encaixes)
-        for cor in pts:
-            vertices.append(cor)
+            ifp_coords = self.ifp(peca,grau_indice)
+            if not ifp_coords:
+                return []
+            
+            if len(self.pecas_posicionadas) == 0:
+                return ifp_coords
+            
+            nfp_coords = self.nfp(peca, grau_indice)
+            
+            intersec = Polygon(ifp_coords).boundary.intersection(nfp_coords.boundary)
+            pts = []
+            if intersec.geom_type == 'Point':
+                pts = [(intersec.x, intersec.y)]
+            else:
+                for part in getattr(intersec, 'geoms', [intersec]):
+                    if hasattr(part, 'coords'):
+                        for x, y in part.coords:
+                            pts.append((x, y))
+        
+            encaixes = Polygon(ifp_coords).difference(nfp_coords)
+        
+            vertices = extrair_vertices(encaixes)
+            for cor in pts:
+                vertices.append(cor)
 
-        if area:
-            return vertices, encaixes.area
-        else:
-            return vertices   
+            self.dict_feasible[chave] = vertices
+            if area:
+                return vertices, encaixes.area
+            else:
+                return vertices   
         
         
     def BL(self, peca, grau_indice):
@@ -828,20 +929,57 @@ class SPP2D():
         ru = positions_ru[0]
         return ru
 
-    def pack(self, peca, grau_indice, regra_idx):
-        pos = self.regras[regra_idx](peca, grau_indice)
-        if pos:
-            # print(pos)
-            self.acao(peca, pos[0], pos[1], grau_indice)
-            # self.plot()
-            return True
-        return False
+    def key_nfp(self, key, peca, grau_indice):
+        positions = self.feasible(peca, grau_indice)
+        
+        if not positions:
+            return []
+        
+        return positions[int(key * len(positions))]
+        
+    def pack(self, peca, grau_indice, regra_idx, regra = True):
+        if regra:
+            
+            pos = self.regras[regra_idx](peca, grau_indice)
+            
+            if pos:
+                # print(pos)
+                self.acao(peca, pos[0], pos[1], grau_indice)
+                # base = self.base
+                # self.base
+                # if time.time() - self.start_time > 20:
+                #     self.plot(legenda='[]')
+                return True
+            return False
+        
+        else:
+            pos = self.key_nfp(regra_idx, peca, grau_indice)
+            if pos:
+                # print(pos)
+                self.acao(peca, pos[0], pos[1], grau_indice)
+                self.plot(legenda='[]')
+                return True
+            return False
         
     def decoder(self, keys):
-        tag = self.tipo
-        if tag == 0:
+        
+        if self.decoder_type == 'D0':
+            rot = keys[:self.max_pecas]
+            pieces = keys[self.max_pecas:]
+            
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+            pieces_idx = np.argsort(pieces)
+            
+            return list(pieces_idx) + rot_idx
+            
+        elif self.decoder_type == 'D0_A':
             rot = keys[:self.max_pecas]
             regras = keys[self.max_pecas:]
+            
             
             rot_idx = []
             tipos_rot = len(self.graus)
@@ -854,20 +992,83 @@ class SPP2D():
                 regras_idx.append(int(key * tipos_regras))
                 
             # print(rot_idx + regras_idx)
-            return rot_idx + regras_idx
-        elif tag == 1:
-            regras = keys
-            regras_idx = []
-            tipos_regras = 2
-            for key in regras:
-                regras_idx.append(int(key * tipos_regras))
-            return regras_idx
-        else:
+            return rot_idx + regras_idx 
+        elif self.decoder_type == 'D0_B':
             pieces = keys[:self.max_pecas]            
             rot = keys[self.max_pecas:2*self.max_pecas]
             regras = keys[2*self.max_pecas:]
             
-            pieces_idx = list(np.argsort(pieces))
+            pieces_idx = np.argsort(pieces)
+            
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+            regras_idx = []
+            tipos_regras = 4
+            for key in regras:
+                regras_idx.append(int(key * tipos_regras))
+                
+            # print(rot_idx + regras_idx)
+            return list(pieces_idx) + rot_idx + regras_idx 
+            
+                
+        elif self.decoder_type == 'D1_A':
+            rot = keys[:self.max_pecas]
+            nfp_key = keys[self.max_pecas:-1]
+            shrink_key = (keys[-1]/5)+0.8
+            
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+  
+                
+           
+            return rot_idx + list(nfp_key) + [shrink_key]
+          
+        elif self.decoder_type == 'D1_B':
+            pieces = keys[:self.max_pecas]            
+            rot = keys[self.max_pecas:2*self.max_pecas]
+            nfp_key = keys[2*self.max_pecas:]
+            
+            pieces_idx = np.argsort(pieces)
+
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+     
+                
+            return list(pieces_idx) + rot_idx + list(nfp_key)
+       
+        elif self.decoder_type == 'D2_A':
+            rot = keys[:self.max_pecas]
+            regras = keys[self.max_pecas:-1]
+            shrink_key = (keys[-1]/5)+0.8
+            
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+            regras_idx = []
+            tipos_regras = 8
+            for key in regras:
+                regras_idx.append(int(key * tipos_regras))
+                
+            # print(rot_idx + regras_idx)
+            return rot_idx + regras_idx + [shrink_key]
+        elif self.decoder_type == 'D2_B':
+                       
+            pieces = keys[:self.max_pecas]            
+            rot = keys[self.max_pecas:2*self.max_pecas]
+            regras = keys[2*self.max_pecas:]
+            
+            pieces_idx = np.argsort(pieces)
 
             rot_idx = []
             tipos_rot = len(self.graus)
@@ -875,82 +1076,263 @@ class SPP2D():
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
             regras_idx = []
-            tipos_regras = 2
+            tipos_regras = 8
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
-            # print(pieces_idx + rot_idx + regras_idx)
             return pieces_idx + rot_idx + regras_idx
 
             
-
-    def cost(self, sol, save = False):
-        tag = self.tipo
-        if tag == 0:
-            rot = sol[:self.max_pecas]
-            regras = sol[self.max_pecas:]
-            i = 0
-            for peca in self.lista_original:
-                # print(i)
-                self.pack(self.lista.index(peca),rot[i], regras[i])
-                i+=1
-                # self.plot()
+    
+    def cost(self, sol, tag = 0, save  =True):
+        if self.decoder_type == 'D0':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                pieces = sol[:self.max_pecas]
+                rot = sol[self.max_pecas:]                                
+                
+                
+              
+                i = 0
+                for idx in pieces:
+                    # print(i)
+                    self.pack(self.lista.index(self.lista_original[idx]),rot[i], 0)
+                    i+=1
+                    # self.plot()
+                
+                
+                # if self.lista == []:
+                #     self.plot()
+                pecas = len(self.pecas_posicionadas) 
+                  
+                
+              
+                fit = -1 * self.area_usada()
+                # print(self.counter, fit)
+                self.dict_sol[tuple(sol)] = fit
+                if save:
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                self.reset()
+                # self.base = self.base / shrink_factor
+                # print(self.base) 
+                return fit
+        
+        
+        
+        elif self.decoder_type == 'D0_A':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                rot = sol[:self.max_pecas]
+                regras = sol[self.max_pecas:]                                
+                
+                
+              
+                i = 0
+                for peca in self.lista_original:
+                    # print(i)
+                    self.pack(self.lista.index(peca),rot[i], regras[i])
+                    i+=1
+                    # self.plot()
+                
+                
+                # if self.lista == []:
+                #     self.plot()
+                pecas = len(self.pecas_posicionadas) 
+                  
+                
+              
+                fit = -1 * self.area_usada()
+                # print(self.counter, fit)
+                self.dict_sol[tuple(sol)] = fit
+                if save:
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                self.reset()
+                # self.base = self.base / shrink_factor
+                # print(self.base) 
+                return fit
             
+        elif self.decoder_type == 'D0_B':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                pieces = sol[:self.max_pecas]
+                rot = sol[self.max_pecas:2*self.max_pecas]
+                regras = sol[self.max_pecas*2:]                              
+                
+                
+              
+                i = 0
+                for idx in pieces:
+                    # print(i)
+                    self.pack(self.lista.index(self.lista_original[idx]),rot[i], regras[i])
+                    i+=1
+                    # self.plot()
+                
+                
+                # if self.lista == []:
+                #     self.plot()
+                pecas = len(self.pecas_posicionadas) 
+                  
+                
+              
+                fit = -1 * self.area_usada()
+                # print(self.counter, fit)
+                self.dict_sol[tuple(sol)] = fit
+                if save:
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                self.reset()
+                # self.base = self.base / shrink_factor
+                # print(self.base) 
+                return fit
+      
+        
+        elif self.decoder_type == 'D1_A':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                rot = sol[:self.max_pecas]
+                nfp_key = sol[self.max_pecas:-1]
+                shrink_factor = sol[-1]
+                
+                self.base = self.base * shrink_factor
+                
+                i = 0
+                for peca in self.lista_original:
+                    # print(i)
+                    self.pack(self.lista.index(peca),rot[i], nfp_key[i], regra=False)
+                    i+=1
+                    # self.plot()
+                
+                
+                # if self.lista == []:
+                    # self.plot()
+                pecas = len(self.pecas_posicionadas)
+                self.base = self.base / shrink_factor
+                
+                if len(self.pecas_posicionadas) == self.max_pecas:    
+                    fit = -1 * self.area_usada()
+                    # print(self.counter, fit)
+                    self.dict_sol[tuple(sol)] = fit
+                    if save:
+                        if fit == self.dict_best[self.instance_name]:
+                            self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    self.reset()
+                    return fit
+                else:
+                    
+                    fit = sum([Polygon(pol).area for pol in self.lista]) * 100 / (self.base * self.altura)
+                    self.reset()
+                    return fit
+        elif self.decoder_type == 'D1_B':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                pieces = sol[:self.max_pecas]
+                rot = sol[self.max_pecas:2*self.max_pecas]
+                nfp_key = sol[self.max_pecas*2:]
+              
+                
+                i = 0
+            for idx in pieces:
+                # print(i)
+                self.pack(self.lista.index(self.lista_original[idx]),rot[i], nfp_key[i], regra=False)
+                i+=1
+                    # self.plot()
+                
             fit = -1 * self.area_usada()
-            if True:
-                # print(fit)
-                self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")    
-            self.reset()    
+            # if self.lista == []:
+            #     self.plot()
+            pecas = len(self.pecas_posicionadas)    
+                
+            # print(self.counter, fit)
+            self.dict_sol[tuple(sol)] = fit
+            if save:
+                if fit == self.dict_best[self.instance_name]:
+                    self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+            self.reset()
             return fit
         
-        elif tag == 1:
-            regras = sol
-            i = 0
-            for peca in self.lista_original:
-                for grau in self.graus:
-                    bool = self.pack(0,grau, regras[i])
-                    if bool == True:
-                        break
-                i+=1
+        elif self.decoder_type == 'D2_A':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                rot = sol[:self.max_pecas]
+                regras = sol[self.max_pecas:-1]                                
+                shrink_factor = sol[-1]
+                
+                self.base = self.base * shrink_factor
+                i = 0
+                for peca in self.lista_original:
+                    # print(i)
+                    self.pack(self.lista.index(peca),rot[i], regras[i])
+                    i+=1
+                    # self.plot()
+                
+                
+                # if self.lista == []:
+                #     self.plot()
+                pecas = len(self.pecas_posicionadas) 
+                  
+                # print(self.base, shrink_factor) 
+                if len(self.pecas_posicionadas) == self.max_pecas:    
+                    fit = -1 * self.area_usada()
+                    # print(self.counter, fit)
+                    self.dict_sol[tuple(sol)] = fit
+                    if save:
+                        if fit == self.dict_best[self.instance_name]:
+                            self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    self.reset()
+                    self.base = self.base / shrink_factor
                     
-            fit = -1 * self.area_usada()
-            if True:
-                # print(fit)
-                self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    return fit
+                else:
                     
-            self.reset()    
-            return fit
-
-        else:
-            pieces = sol[:self.max_pecas]
-            rot = sol[self.max_pecas:2*self.max_pecas]
-            regras = sol[self.max_pecas*2:]
-            i = 0
+                    # fit = sum([Polygon(pol).area for pol in self.lista]) * 100 / (self.base * self.altura)
+                    fit = -1 * self.area_usada()
+                    self.reset()
+                    self.base = self.base / shrink_factor
+                    return fit
+        
+        elif self.decoder_type == 'D2_B':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                pieces = sol[:self.max_pecas]
+                rot = sol[self.max_pecas:2*self.max_pecas]
+                regras = sol[self.max_pecas*2:]
+                
+                i = 0
             for idx in pieces:
                 # print(i)
                 self.pack(self.lista.index(self.lista_original[idx]),rot[i], regras[i])
                 i+=1
-                # self.plot()
-            
+                    # self.plot()
+                
             fit = -1 * self.area_usada()
-            # if True:
-            #     # print(fit)
-            #     self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")   
-            self.reset()    
+            # if self.lista == []:
+            #     self.plot()
+            pecas = len(self.pecas_posicionadas)    
+                
+            # print(self.counter, fit)
+            self.dict_sol[tuple(sol)] = fit
+            if save:
+                if fit == self.dict_best[self.instance_name]:
+                    self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+            self.reset()
             return fit
+
                     
             
                 
         
             
-    def plot(self,legenda=None):
-        coords = []
-        for pol in self.pecas_posicionadas:
-            for x,y in pol:
-                coords.append(y)
-        
-        larg = max(coords) - min(coords)
-        # draw_cutting_area(self.pecas_posicionadas, self.base, larg,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DISPP\\{self.instance_name}_{random.randint(0,500)}.png')
+    def plot(self, legenda):
+        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Images\\SPP\\{self.instance_name}\\{self.instance_name}_{time.time()}.png')
     
         
     def area_usada(self):
@@ -972,16 +1354,16 @@ class SPP2D():
         coords = []
         for pol in self.pecas_posicionadas:
             for x,y in pol:
-                coords.append(y)
+                coords.append(x)
         
         larg = max(coords) - min(coords)
-        area_bin = (larg / self.escala) * (self.base / self.escala)
+        area_bin = (larg / self.escala) * (self.altura / self.escala)
         # area_bin = (self.base / self.escala) * (self.altura / self.escala)
 
         return round((area_total / area_bin) * 100, 2) 
 
 # while True:
-#     env = SPP2D(dataset='shapes1')
+#     env = Knapsack2D(dataset='shapes1')
     
 #     keys = np.random.random(2 * env.max_pecas)
 #     sol = env.decoder(keys)
@@ -994,31 +1376,18 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["albano","shirts","trousers","shapes2","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","fu","jackobs1","jackobs2","swim"]
-    for tempo in [1200]:        
-        for ins in instancias:
-            list_time = []
-            list_cost = []
-            for i in range(3):
-                print(f'Instancia: {ins}, Tentativa: {i+1}')
-                env = SPP2D(dataset=ins, tempo=tempo)
-                print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                solver = RKO(env)
-                # with open('dados_nn.csv', 'a', newline='') as f:
-                    # f.write(f'dados = [ \n')
-                # while True:
-                #     # keys = solver.random_keys()
-                #     # cost = env.cost(env.decoder(keys))
-                #     start = time.time()
-                #     solver.NelderMeadSearch(solver.random_keys(), None)
-                #     print('\n',round(time.time() - start, 2), 'segundos')
-                #     # with open('dados_nn.csv', 'a', newline='') as f:
-                #         # f.write(f'[{list(keys)}, {cost}],\n')
+    # instancias = ["fu","marques","swim"]    
+    instancias = ["shapes0"]
+    decoders = ['D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
+    for tempo in [1200]:    
+        for restart in [1]:
+            for decoder in decoders:    
+                for ins in instancias:
+                    list_time = []
+                    list_cost = []
+                    
+                    env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
+                    print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
+                    solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP\\testes_RKO.csv')
+                    cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
 
-                cost,sol, temp = solver.solve(100,0.2,0.7,tempo,8,brkga=2,ms=1,sa=1,vns=2,ils=2)
-                cost = env.cost(env.decoder(sol), save=True)
-                list_time.append(round(temp,2))
-                list_cost.append(round(cost*-1,2))
-                
-            with open('testes_RKO.csv', 'a', newline='') as f:
-                f.write(f'{tempo}, {ins}, {round(sum(list_cost)/len(list_cost),2)}, {list_cost}, {round(sum(list_time)/len(list_time),2)}, {list_time}\n')

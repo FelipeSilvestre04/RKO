@@ -94,11 +94,19 @@ def draw_cutting_area(pieces, area_width, area_height, legenda=None, filename=No
 
     plt.tight_layout()
 
-    # salva em arquivo, se solicitado
-    if filename:
-        plt.savefig(filename, dpi=150)
-    # plt.show()
+   
+    directory = os.path.dirname(filename)
 
+    if legenda == '[]':
+        plt.show()
+
+    else:
+        
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        if filename:
+            plt.savefig(filename, dpi=150)
+    
 def offset_polygon(vertices, offset):
     """
     Cria um novo polígono com offset a partir de um polígono original usando Shapely
@@ -499,7 +507,9 @@ def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
 
 
 class Knapsack2D():
-    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200):
+    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200, decoder = 'D1'):
+        self.decoder_type = decoder
+        
         self.save_q_learning_report = True
         self.counter = 0
         self.BRKGA_parameters = {
@@ -616,7 +626,10 @@ class Knapsack2D():
             7: self.RU,
         }
         self.dict_sol = {}
-        self.tam_solution = 2 * self.max_pecas
+        if self.decoder_type == 'D1_A' or self.decoder_type == 'D2_A':
+            self.tam_solution = 2 * self.max_pecas
+        elif self.decoder_type == 'D1_B' or self.decoder_type == 'D2_B':
+            self.tam_solution = 3 * self.max_pecas
         self.LS_type = 'Best'
         self.greedy = []
         self.dict_best ={
@@ -641,30 +654,6 @@ class Knapsack2D():
         self.dict_feasible = {}
         
 
-        self.BRKGA_parameters_list = [
-            [300.0, 400.0, 500.0],  # p
-            [0.10, 0.15, 0.20],     # pe
-            [0.10, 0.15, 0.20],     # pm
-            [0.60, 0.65, 0.70]      # rhoe
-        ]
-
-        self.SA_parameters_list = [
-            [250.0, 500.0, 750.0],   # SAmax
-            [0.97, 0.99, 0.99],      # alphaSA
-            [0.03, 0.04, 0.05],      # betaMin
-            [0.08, 0.09, 0.10],      # betaMax
-            [100000.0]               # T0
-        ]
-        
-        self.ILS_parameters_list = [
-            [0.05, 0.10, 0.15], # betaMin
-            [0.15, 0.20, 0.25]  # betaMax
-        ]
-
-        self.VNS_parameters_list = [
-            [5.0, 8.0, 10.0],   # kMax
-            [0.02, 0.04, 0.05]  # betaMin
-        ]
 
 
 
@@ -890,19 +879,68 @@ class Knapsack2D():
         ru = positions_ru[0]
         return ru
 
-    def pack(self, peca, grau_indice, regra_idx):
-        pos = self.regras[regra_idx](peca, grau_indice)
-        if pos:
-            # print(pos)
-            self.acao(peca, pos[0], pos[1], grau_indice)
-            # self.plot()
-            return True
-        return False
+    def key_nfp(self, key, peca, grau_indice):
+        positions = self.feasible(peca, grau_indice)
         
-    def decoder(self, keys, tag = 0):
+        if not positions:
+            return []
         
-        self.counter += 1
-        if tag == 0:
+        return positions[int(key * len(positions))]
+        
+    def pack(self, peca, grau_indice, regra_idx, regra = True):
+        if regra:
+            
+            pos = self.regras[regra_idx](peca, grau_indice)
+            
+            if pos:
+                # print(pos)
+                self.acao(peca, pos[0], pos[1], grau_indice)
+                # self.plot()
+                return True
+            return False
+        
+        else:
+            pos = self.key_nfp(regra_idx, peca, grau_indice)
+            if pos:
+                # print(pos)
+                self.acao(peca, pos[0], pos[1], grau_indice)
+                # self.plot(legenda='[]')
+                return True
+            return False
+        
+    def decoder(self, keys):
+                
+        if self.decoder_type == 'D1_A':
+            rot = keys[:self.max_pecas]
+            nfp_key = keys[self.max_pecas:]
+            
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+  
+                
+           
+            return rot_idx + list(nfp_key)
+          
+        elif self.decoder_type == 'D1_B':
+            pieces = keys[:self.max_pecas]            
+            rot = keys[self.max_pecas:2*self.max_pecas]
+            nfp_key = keys[2*self.max_pecas:]
+            
+            pieces_idx = np.argsort(pieces)
+
+            rot_idx = []
+            tipos_rot = len(self.graus)
+            for key in rot:
+                rot_idx.append(self.graus[int(key * tipos_rot)])
+                
+     
+                
+            return list(pieces_idx) + rot_idx + list(nfp_key)
+       
+        elif self.decoder_type == 'D2_A':
             rot = keys[:self.max_pecas]
             regras = keys[self.max_pecas:]
             
@@ -918,14 +956,8 @@ class Knapsack2D():
                 
             # print(rot_idx + regras_idx)
             return rot_idx + regras_idx
-        elif tag == 1:
-            regras = keys
-            regras_idx = []
-            tipos_regras = 8
-            for key in regras:
-                regras_idx.append(int(key * tipos_regras))
-            return regras_idx
-        else:                        
+        elif self.decoder_type == 'D2_B':
+                       
             pieces = keys[:self.max_pecas]            
             rot = keys[self.max_pecas:2*self.max_pecas]
             regras = keys[2*self.max_pecas:]
@@ -942,13 +974,68 @@ class Knapsack2D():
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
-            # print(rot_idx + regras_idx)
             return pieces_idx + rot_idx + regras_idx
 
             
 
-    def cost(self, sol, tag = 0, save  =False):
-        if tag == 0:
+    def cost(self, sol, tag = 0, save  =True):
+        
+        if self.decoder_type == 'D1_A':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                rot = sol[:self.max_pecas]
+                nfp_key = sol[self.max_pecas:]
+                
+                i = 0
+                for peca in self.lista_original:
+                    # print(i)
+                    self.pack(self.lista.index(peca),rot[i], nfp_key[i], regra=False)
+                    i+=1
+                    # self.plot()
+                
+                fit = -1 * self.area_usada()
+                # if self.lista == []:
+                #     self.plot()
+                pecas = len(self.pecas_posicionadas)    
+                    
+                # print(self.counter, fit)
+                self.dict_sol[tuple(sol)] = fit
+                if save:
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                self.reset()
+                return fit
+        elif self.decoder_type == 'D1_B':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                pieces = sol[:self.max_pecas]
+                rot = sol[self.max_pecas:2*self.max_pecas]
+                nfp_key = sol[self.max_pecas*2:]
+              
+                
+                i = 0
+            for idx in pieces:
+                # print(i)
+                self.pack(self.lista.index(self.lista_original[idx]),rot[i], nfp_key[i], regra=False)
+                i+=1
+                    # self.plot()
+                
+            fit = -1 * self.area_usada()
+            # if self.lista == []:
+            #     self.plot()
+            pecas = len(self.pecas_posicionadas)    
+                
+            # print(self.counter, fit)
+            self.dict_sol[tuple(sol)] = fit
+            if save:
+                if fit == self.dict_best[self.instance_name]:
+                    self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+            self.reset()
+            return fit
+        
+        elif self.decoder_type == 'D2_A':
             if tuple(sol) in self.dict_sol:
                 return self.dict_sol[tuple(sol)]
             else:
@@ -969,42 +1056,37 @@ class Knapsack2D():
                 # print(self.counter, fit)
                 self.dict_sol[tuple(sol)] = fit
                 if save:
-                    # print(fit)
-                    self.plot(f"{fit} - {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
                 self.reset()
                 return fit
         
-        elif tag == 1:
-            regras = sol
-            i = 0
-            for peca in self.lista_original:
-                for grau in self.graus:
-                    bool = self.pack(0,grau, regras[i])
-                    if bool == True:
-                        break
-                i+=1
-                    
-            fit = -1 * self.area_usada()
-            
-                    
-            self.reset()    
-            return fit
-
-        else:
-            pieces = sol[:self.max_pecas]
-            rot = sol[self.max_pecas:2*self.max_pecas]
-            regras = sol[self.max_pecas*2:]
-            i = 0
+        elif self.decoder_type == 'D2_B':
+            if tuple(sol) in self.dict_sol:
+                return self.dict_sol[tuple(sol)]
+            else:
+                pieces = sol[:self.max_pecas]
+                rot = sol[self.max_pecas:2*self.max_pecas]
+                regras = sol[self.max_pecas*2:]
+                
+                i = 0
             for idx in pieces:
                 # print(i)
                 self.pack(self.lista.index(self.lista_original[idx]),rot[i], regras[i])
                 i+=1
-                # self.plot()
-            
+                    # self.plot()
+                
             fit = -1 * self.area_usada()
             # if self.lista == []:
-            #     self.plot()    
-            self.reset()    
+            #     self.plot()
+            pecas = len(self.pecas_posicionadas)    
+                
+            # print(self.counter, fit)
+            self.dict_sol[tuple(sol)] = fit
+            if save:
+                if fit == self.dict_best[self.instance_name]:
+                    self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+            self.reset()
             return fit
 
                     
@@ -1013,7 +1095,7 @@ class Knapsack2D():
         
             
     def plot(self, legenda):
-        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DIKP\\{self.instance_name}_{random.randint(0,500)}.png')
+        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Images\\KP\\{self.instance_name}\\{self.instance_name}_{time.time()}.png')
     
         
     def area_usada(self):
@@ -1057,15 +1139,17 @@ class Knapsack2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["fu","shirts","trousers","jackobs1","jackobs2","shapes2","albano","shapes0","shapes1","dighe1","dighe2","dagli","mao","marques","swim"]    
-    for tempo in [400,1200]:    
-        for restart in [0.5, 1]:    
-            for ins in instancias:
-                list_time = []
-                list_cost = []
-                
-                env = Knapsack2D(dataset=ins, tempo=tempo * restart)
-                print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                solver = RKO(env, print_best=True, save_directory='c:\\Users\\felip\\Documents\\GitHub\\RKO\\testes_RKO.csv')
-                cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= 0.5,  runs=10)
+    instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"]    
+    decoders = ['D1_A', 'D1_B', 'D2_A', 'D2_B']
+    for tempo in [400]:    
+        for restart in [1, 0.5]:
+            for decoder in decoders:    
+                for ins in instancias:
+                    list_time = []
+                    list_cost = []
+                    
+                    env = Knapsack2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
+                    print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
+                    solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\{decoder}\\testes_RKO.csv')
+                    cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=2)
 

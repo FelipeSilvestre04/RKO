@@ -1359,7 +1359,9 @@ class RKO():
         for i in range(runs):
             print(f'Instancia: {self.env.instance_name}, Execução: {i+1}/{runs}')
             limit_time = time_total * restart
+            
             restarts = int(1/restart)
+          
             
             self.max_time = limit_time
             
@@ -1379,6 +1381,7 @@ class RKO():
             processes = []
             
             for k in range(restarts):
+                
                 tag = 0
                 self.start_time = time.time()
                 if self.stop_condition(shared.pool.best_pair[0], 'RKO', tag, pool=shared.pool):
@@ -1454,7 +1457,12 @@ class RKO():
                     p.start()
 
                 for p in processes:
-                    p.join()
+                    p.join(timeout=self.max_time)
+                    
+                for p in processes:
+                    if p.is_alive():
+                        print(f"Processo {p.pid} estourou o tempo e será terminado.")
+                        p.terminate() # Força o encerramento do processo
 
             cost = shared.pool.best_pair[0]
             solution = shared.pool.best_pair[1]     
@@ -1464,6 +1472,10 @@ class RKO():
             costs.append(round(cost,2))
             times.append(round(-1 * time_elapsed,2))
             
+        directory = os.path.dirname(self.save_directory)
+
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with open(self.save_directory, 'a', newline='') as f:
             f.write(f'{time_total}, {self.env.instance_name}, {round(sum(costs)/len(costs),2)}, {costs}, {round(sum(times)/len(times),2)}, {times}\n')
         
