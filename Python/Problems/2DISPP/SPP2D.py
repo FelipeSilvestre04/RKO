@@ -672,13 +672,18 @@ class SPP2D():
         }   
         elif self.decoder_type == 'D0_B':
             self.tam_solution = 3 * self.max_pecas
-            self.regras = {
-            0: self.UL,
-            1: self.LB,
-            2: self.BL,
-            3: self.LU,
+        #     self.regras = {
+        #     0: self.BL,
+        #     1: self.LB,
+        #     2: self.UL,
+        #     3: self.LU,
 
-        }
+        # }   
+            self.regras = {
+            0: self.BL,
+            1: self.UL,
+
+        } 
             
         self.LS_type = 'Best'
         self.greedy = []
@@ -721,6 +726,7 @@ class SPP2D():
         
         self.indices_pecas_posicionadas.append([x,y,grau_idx,self.lista_original.index(self.lista[peca])])
         
+        self.lista_anterior = copy.deepcopy(self.lista)
         self.lista.pop(peca)
         
 
@@ -729,6 +735,12 @@ class SPP2D():
         self.lista = copy.deepcopy(self.lista_original)
         self.pecas_posicionadas = []
         self.indices_pecas_posicionadas = []
+        
+    def remover_ultima_acao(self):
+        if self.pecas_posicionadas:
+            self.lista = copy.deepcopy(self.lista_anterior)
+            self.pecas_posicionadas.pop()
+            self.indices_pecas_posicionadas.pop()
     
     def rot_pol(self,pol, grau_indice):
         
@@ -928,6 +940,38 @@ class SPP2D():
         positions_ru = sorted(positions, key=lambda ponto: (-ponto[1], -ponto[0]))
         ru = positions_ru[0]
         return ru
+    
+    def avaliar_posicoes_onepass(self, pos, peca_idx, grau_indice):
+        medias = []
+        # print(peca_idx, len(self.lista))
+        self.acao(peca_idx, pos[0], pos[1], grau_indice)
+        for peca in self.lista:
+            for grau in self.graus:
+                positions = self.feasible(self.lista.index(peca), grau)
+                media = sum([x for x, y in positions]) / len(positions) 
+                # print(medias)
+                medias.append(media)
+                # self.remover_ultima_acao()
+        
+        if medias == []:
+            fit = pos[0]
+        else:
+            fit = sum(medias) / len(medias) 
+        self.remover_ultima_acao()
+        return fit
+                
+
+    def OnePass(self, peca, grau_indice):
+        positions = self.feasible(peca, grau_indice)
+        best_pos = None
+        best_fit = float('inf')
+        for pos in positions:
+            fit = self.avaliar_posicoes_onepass(pos, peca, grau_indice)
+            if fit < best_fit:
+                best_fit = fit
+                best_pos = pos
+            
+        return best_pos
 
     def key_nfp(self, key, peca, grau_indice):
         positions = self.feasible(peca, grau_indice)
@@ -948,7 +992,7 @@ class SPP2D():
                 # base = self.base
                 # self.base
                 # if time.time() - self.start_time > 20:
-                #     self.plot(legenda='[]')
+                # self.plot(legenda='[]')
                 return True
             return False
         
@@ -1006,7 +1050,7 @@ class SPP2D():
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
             regras_idx = []
-            tipos_regras = 4
+            tipos_regras = 2
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
@@ -1334,6 +1378,61 @@ class SPP2D():
     def plot(self, legenda):
         draw_cutting_area(self.pecas_posicionadas, self.base, self.altura,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Images\\SPP\\{self.instance_name}\\{self.instance_name}_{time.time()}.png')
     
+    def get_used_width(self):
+        original_counter = Counter(tuple(map(tuple, pol)) for pol in self.lista_original)
+        nao_usado_counter = Counter(tuple(map(tuple, pol)) for pol in self.lista)
+
+        # Subtrai pra obter os usados
+        usados_counter = original_counter - nao_usado_counter
+
+        # Reconstrói a lista de polígonos usados
+        usados = []
+        for pol, count in usados_counter.items():
+            usados.extend([list(pol) for _ in range(count)])
+
+        # Soma as áreas
+        area_total = sum(Polygon(pol).area for pol in usados)
+
+        # Área total do bin
+        coords = []
+        for pol in self.pecas_posicionadas:
+            for x,y in pol:
+                coords.append(x)
+        if coords == []:
+            return 0
+        larg = max(coords) - min(coords)
+        area_bin = (larg / self.escala) * (self.altura / self.escala)
+        # area_bin = (self.base / self.escala) * (self.altura / self.escala)
+
+        return larg 
+    
+    def get_efficiency(self):
+        original_counter = Counter(tuple(map(tuple, pol)) for pol in self.lista_original)
+        nao_usado_counter = Counter(tuple(map(tuple, pol)) for pol in self.lista)
+
+        # Subtrai pra obter os usados
+        usados_counter = original_counter - nao_usado_counter
+
+        # Reconstrói a lista de polígonos usados
+        usados = []
+        for pol, count in usados_counter.items():
+            usados.extend([list(pol) for _ in range(count)])
+
+        # Soma as áreas
+        area_total = sum(Polygon(pol).area for pol in usados)
+
+        # Área total do bin
+        coords = []
+        for pol in self.pecas_posicionadas:
+            for x,y in pol:
+                coords.append(x)
+        if coords == []:
+            return 0
+        larg = max(coords) - min(coords)
+        area_bin = (larg / self.escala) * (self.altura / self.escala)
+        # area_bin = (self.base / self.escala) * (self.altura / self.escala)
+
+        return round((area_total / area_bin) * 100, 2) 
         
     def area_usada(self):
         original_counter = Counter(tuple(map(tuple, pol)) for pol in self.lista_original)
@@ -1377,10 +1476,11 @@ class SPP2D():
 
 if __name__ == '__main__':
     # instancias = ["fu","marques","swim"]    
-    instancias = ["shapes0"]
-    decoders = ['D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
-    for tempo in [1200]:    
-        for restart in [1]:
+    instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
+    # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
+    decoders = ['D0_B']
+    for tempo in [3600]:    
+        for restart in [0.3]:
             for decoder in decoders:    
                 for ins in instancias:
                     list_time = []
@@ -1388,6 +1488,6 @@ if __name__ == '__main__':
                     
                     env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
                     print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                    solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP\\testes_RKO.csv')
-                    cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
+                    solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
+                    cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=5)
 
