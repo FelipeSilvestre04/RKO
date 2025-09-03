@@ -6,6 +6,8 @@ import builtins
 # Em Python 3, adiciona alias para xrange
 builtins.xrange = range
 from poly_decomp.poly_decomp import polygonQuickDecomp
+from shapely.geometry import Polygon, MultiPoint
+from shapely import affinity
 
 
 
@@ -47,7 +49,7 @@ def NoFitPolygon(poligono_fixo, poligono_orbital):
     polyA = Polygon(poligono_fixo)
     polyB = Polygon(poligono_orbital)
 
-    return interpolar_pontos_poligono(no_fit_polygon(polyA, polyB), 0)
+    return no_fit_polygon(polyA, polyB)
 
 def NFP(PecaA,grauA,PecaB,grauB):
     graus = [0,90,180,270]
@@ -71,44 +73,51 @@ def NFP(PecaA,grauA,PecaB,grauB):
 
     return nfp_final
 
-def minkowski_sum(polygonA, polygonB, ref_point_B):
-    """Calcula a soma de Minkowski entre dois polígonos usando um ponto de referência de B e retorna apenas os pontos da soma."""
+def NoFitPolygon(poligono_fixo, poligono_orbital):
+    """
+    Wrapper que converte listas de coordenadas em Polígonos
+    e chama a função de cálculo principal do NFP.
+    """
+    polyA = Polygon(poligono_fixo)
+    polyB = Polygon(poligono_orbital)
+
+    # Chama a nova versão corrigida que retorna um objeto Polygon
+    nfp_polygon = no_fit_polygon(polyA, polyB)
     
-    sum = []
-    sum_conv = []
-    for p1 in polygonA.exterior.coords:
-        sum_points = []
-        for p2 in polygonB.exterior.coords:
-            # A soma é ajustada para que p2 seja relativo ao ponto de referência ref_point_B
-            sum_points.append((p1[0] + p2[0] - ref_point_B[0], p1[1] + p2[1] - ref_point_B[1]))
-            sum_conv.append((p1[0] + p2[0] - ref_point_B[0], p1[1] + p2[1] - ref_point_B[1]))
-        sum.append(Polygon(sum_points))
-        
-    
-    # Cria um polígono a partir dos pontos da soma
-    #print(len(sum))
-    #if polygonB.equals(polygonB.convex_hull) and polygonA.equals(polygonA.convex_hull):
-        #print("convexo")
-    if True:
-        return MultiPoint(sum_conv).convex_hull
-        
-    else:
-        return Polygon(combinar_poligonos(sum))
+    # IMPORTANTE: A sua função NFP de alto nível deve retornar este objeto Polygon,
+    # e não uma lista de vértices, para preservar a informação de buracos.
+    return nfp_polygon
 
 def no_fit_polygon(polyA, polyB):
-
-    ref_point_B = polyB.exterior.coords[0]  # Usa o primeiro vértice de B como ponto de referência
+    """
+    Calcula o No-Fit Polygon para dois polígonos JÁ NORMALIZADOS.
+    A (fixo) e B (orbital).
+    Retorna um objeto Polygon do Shapely.
+    """
+    # Como polyB já foi normalizado pela sua função rot_pol,
+    # não precisamos mais de lógicas complexas de ponto de referência.
     
-    # Inverte as coordenadas de B para simular a diferença de Minkowski
-    polyB_inverted = Polygon([(-x, -y) for x, y in polyB.exterior.coords])
+    # 1. Inverte o polígono orbital B
+    polyB_inverted = affinity.scale(polyB, xfact=-1, yfact=-1, origin=(0, 0))
     
+    # 2. Calcula a soma de Minkowski, que é o NFP quando B está normalizado.
+    nfp = minkowski_sum_convex(polyA, polyB_inverted)
 
+    return nfp
 
-    nfp = minkowski_sum(polyA, polyB_inverted, ref_point_B)
-
-    
-    # Retorna o contorno do NFP combinado
-    return [(x + ref_point_B[0], y + ref_point_B[1]) for x,y in list(nfp.exterior.coords)]
+def minkowski_sum_convex(polygonA, polygonB):
+    """
+    Calcula a soma de Minkowski para dois polígonos CONVEXOS.
+    Retorna um objeto Polygon do Shapely.
+    """
+    sum_conv = []
+    # Itera sobre todos os pares de vértices e os soma
+    for p1 in polygonA.exterior.coords:
+        for p2 in polygonB.exterior.coords:
+            sum_conv.append((p1[0] + p2[0], p1[1] + p2[1]))
+            
+    # O fecho convexo da soma dos vértices é a Soma de Minkowski
+    return MultiPoint(sum_conv).convex_hull
 def combinar_poligonos(poligonos):
     """
     Recebe uma lista de polígonos e retorna um único polígono que representa
