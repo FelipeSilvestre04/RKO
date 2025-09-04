@@ -442,7 +442,7 @@ class Visualizer:
 if __name__ == '__main__':
     
 
-    meu_ambiente_spp = SPP2D(dataset='fu' )
+    meu_ambiente_spp = SPP2D(dataset='jackobs2' )
 
 
 
