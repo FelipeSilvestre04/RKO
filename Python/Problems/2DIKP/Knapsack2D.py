@@ -1145,10 +1145,21 @@ if __name__ == '__main__':
         for restart in [1, 0.5]:
             for decoder in decoders:    
                 for ins in instancias:
+                    i = 0
+                    env = Knapsack2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
+                    start = time.time()
+                    while time.time() - start < 60:
+                        keys = np.random.random(env.tam_solution)
+                        sol = env.decoder(keys)
+                        print(env.cost(sol, save=False))
+                        
+                        i += 1
+                        
+                    print(i)
                     list_time = []
                     list_cost = []
                     
-                    env = Knapsack2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
+                    
                     print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                     solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\{decoder}\\testes_RKO.csv')
                     cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=2)

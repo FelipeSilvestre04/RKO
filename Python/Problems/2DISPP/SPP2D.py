@@ -13,6 +13,7 @@ from nfp_teste import combinar_poligonos, triangulate_shapely,NoFitPolygon, inte
 from shapely import intersection_all
 import shapely
 from shapely import Polygon, MultiPolygon, unary_union, LineString, MultiLineString, MultiPoint, LinearRing, GeometryCollection, Point
+from shapely.prepared import prep
 import itertools
 from scipy.spatial import ConvexHull
 import numpy as np
@@ -485,10 +486,15 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     nfp_unido = unary_union(nfps_convx)
     pontos_candidatos = set()
     for subgrupo in intersec_parts:
+        for ponto in pontos_pol_A:
+            pontos_candidatos.add(Point(ponto))
+            
+        for ponto in pontos_pol_B:
+            pontos_candidatos.add(Point(ponto))
         # 1. Adiciona TODOS os vértices originais de cada NFP parcial no subgrupo
-        # for nfp in subgrupo:
-        #     for ponto in nfp.exterior.coords:
-        #         pontos_candidatos.add(ponto)
+        for nfp in subgrupo:
+            for ponto in nfp.exterior.coords:
+                pontos_candidatos.add(ponto)
         
         # 2. Adiciona os NOVOS vértices criados na interseção par a par
         if len(subgrupo) > 1:
@@ -782,7 +788,7 @@ class SPP2D():
         #         reverse=True
         #     )
   
-        print(lista)
+        # print(lista)
         self.lista_original = lista
         
         
@@ -855,7 +861,7 @@ class SPP2D():
 
         # }   
             self.regras = {
-            0: self.OnePass,
+            0: self.BL,
             1: self.UL,
 
         }   
@@ -993,35 +999,39 @@ class SPP2D():
     def nfp(self, peca, grau_indice):
         nfps = []
         todos_pontos_de_encontro = []
-        
-        # Itera sobre as peças já posicionadas para construir o NFP combinado
+
+        # cria chave de prefixo (estado atual das peças posicionadas + peça nova)
+        chaves = []
         for x2, y2, grau1, pol_idx in self.indices_pecas_posicionadas:
             chave = (
                 tuple(self.lista_original[pol_idx]), grau1,
                 tuple(self.lista[peca]), grau_indice
             )
-            
-            # Pega os dados salvos da tabela
+            chaves.append((chave, x2, y2))
+        prefixo_t = tuple(chaves)
+
+        # se já calculou esse prefixo antes, retorna direto do cache
+        if prefixo_t in self.dict_nfps:
+            return self.dict_nfps[prefixo_t]
+
+        # caso contrário, calcula normalmente
+        for (chave, x2, y2) in chaves:
             nfp_salvo = self.tabela_nfps.get(chave)
             if not nfp_salvo:
                 continue
-            
-            # nfp_salvo é uma lista: [lista_de_coords_do_nfp, lista_de_pontos_de_intersecao]
+
             coords_base_nfp = nfp_salvo[0]
             pontos_intersec_base = nfp_salvo[1]
-            print(pontos_intersec_base)
 
-            # Reconstrói o Polygon a partir das coordenadas
             base_nfp = Polygon(coords_base_nfp)
-            
             if base_nfp.is_empty:
                 continue
 
-            # 1. Translada o NFP principal para a posição correta e o adiciona à lista
+            # translada o NFP
             p = affinity.translate(base_nfp, xoff=x2, yoff=y2)
             nfps.append(p)
 
-            # 2. Translada os pontos de interseção e os adiciona à lista geral
+            # translada pontos de interseção
             if pontos_intersec_base:
                 pontos_transladados = [(pt[0] + x2, pt[1] + y2) for pt in pontos_intersec_base]
                 todos_pontos_de_encontro.append(pontos_transladados)
@@ -1029,97 +1039,134 @@ class SPP2D():
         if not nfps:
             return None, None
 
-
         ocupado = unary_union(nfps)
+        # self.prepared_nfps = [prep(nfp) for nfp in nfps]
+        # self.boundaries = [nfp.boundary for nfp in nfps]
+        
 
         pontos_validos = []
-        if todos_pontos_de_encontro:
-            
 
-            area_proibida = ocupado
-            i = -1
-            for pontos in todos_pontos_de_encontro:
-                i += 1
-                for ponto in pontos:
-                    valido = True
-                    j = -1
-                    for nfp in nfps:
-                        j += 1
-                        if Polygon(nfp).contains(Point(ponto)) and i != j:
-                            valido = False
-                        
-                    if valido:
-                        pontos_validos.append(ponto)
-       
+        # # --- Valida pontos de interseção pré-calculados ---
+        # if todos_pontos_de_encontro:
+        #     for i, pontos in enumerate(todos_pontos_de_encontro):
+        #         for ponto in pontos:
+        #             valido = True
+        #             pt = Point(ponto)  # cria uma vez
+        #             for j, nfp_prep in enumerate(self.prepared_nfps):
+        #                 if i != j and nfp_prep.contains(pt):
+        #                     valido = False
+        #                     break
+        #             if valido:
+        #                 pontos_validos.append(ponto)
+
+        # pontos_candidatos = set()
+
+        # if len(nfps) > 1:
+        #     # intersecção global das fronteiras
+        #     intersec_total = intersection_all(self.boundaries)
+        #     if not intersec_total.is_empty:
+        #         for ponto in extrair_vertices(intersec_total):
+        #             pontos_candidatos.add(ponto)
+
+        #     # combinações em pares
+        #     for (p1, b1), (p2, b2) in itertools.combinations(zip(nfps, self.boundaries), 2):
+        #         if not b1.bounds or not b2.bounds:
+        #             continue
+        #         # filtro rápido por bbox
+        #         minx1, miny1, maxx1, maxy1 = b1.bounds
+        #         minx2, miny2, maxx2, maxy2 = b2.bounds
+        #         if maxx1 < minx2 or maxx2 < minx1 or maxy1 < miny2 or maxy2 < miny1:
+        #             continue
+
+        #         intersec = b1.intersection(b2)
+        #         if not intersec.is_empty:
+        #             for ponto in extrair_vertices(intersec):
+        #                 pontos_candidatos.add(ponto)
+
+        # # valida pontos candidatos
+        # for ponto in pontos_candidatos:
+        #     valido = True
+        #     pt = Point(ponto)
+        #     for nfp_prep in self.prepared_nfps:
+        #         if nfp_prep.contains(pt):
+        #             valido = False
+        #             break
+        #     if valido:
+        #         pontos_validos.append(ponto)
+
         intersec_final = MultiPoint(pontos_validos) if pontos_validos else None
-        # print(intersec_final)
-        return ocupado, intersec_final    
+
+        # salva no cache antes de retornar
+        self.dict_nfps[prefixo_t] = (ocupado, intersec_final)
+
+        return ocupado, intersec_final
+
     def feasible(self, peca, grau_indice, area=False):
         chave = tuple([peca, grau_indice, tuple(map(tuple, self.pecas_posicionadas))])
-        
+
+        # 1. Verifica cache do feasible
         if chave in self.dict_feasible:
-            # Se o resultado já foi calculado, retorna do cache
             cached_result = self.dict_feasible[chave]
             if area:
                 return cached_result['vertices'], cached_result['area']
             return cached_result['vertices']
 
-        # Calcula o Inner-Fit Polygon (área permitida dentro do bin)
+        # 2. Calcula o Inner-Fit Polygon (área permitida dentro do bin)
         ifp_coords = self.ifp(peca, grau_indice)
         if not ifp_coords:
             return ([], 0) if area else []
-        
+
         ifp_polygon = Polygon(ifp_coords)
-        
-        # Se não houver peças posicionadas, a região factível é o próprio IFP
+
+        # 3. Caso não haja peças já posicionadas → retorno simples
         if not self.pecas_posicionadas:
             vertices = list(ifp_polygon.exterior.coords)
             self.dict_feasible[chave] = {'vertices': vertices, 'area': ifp_polygon.area}
             if area:
                 return vertices, ifp_polygon.area
             return vertices
-                
-        # Calcula o No-Fit Polygon combinado (área proibida)
+
+        # 4. Calcula o No-Fit Polygon combinado (já com cache agressivo no nfp)
         nfp_polygon, nfp_intersec = self.nfp(peca, grau_indice)
-        
-        intersec = Polygon(ifp_coords).boundary.intersection(nfp_polygon.boundary)
+
+        # 5. Interseção entre bordas IFP × NFP
+        intersec = ifp_polygon.boundary.intersection(nfp_polygon.boundary) if nfp_polygon else None
         pts = []
-        if intersec.geom_type == 'Point':
-            pts = [(intersec.x, intersec.y)]
-        else:
-            for part in getattr(intersec, 'geoms', [intersec]):
-                if hasattr(part, 'coords'):
-                    for x, y in part.coords:
-                        pts.append((x, y))
-        
-        # A região factível ("encaixes") é a diferença entre a área permitida e a proibida
+        if intersec and not intersec.is_empty:
+            if intersec.geom_type == 'Point':
+                pts = [(intersec.x, intersec.y)]
+            else:
+                for part in getattr(intersec, 'geoms', [intersec]):
+                    if hasattr(part, 'coords'):
+                        pts.extend(list(part.coords))
+
+        # 6. Diferença (área factível)
         if nfp_polygon and not nfp_polygon.is_empty:
             encaixes = ifp_polygon.difference(nfp_polygon)
         else:
-            # Se não há NFP, a área factível ainda é o IFP
             encaixes = ifp_polygon
 
-        # Usa sua função robusta para extrair todos os vértices da geometria resultante
+        # 7. Extrai vértices da área
         vertices = extrair_vertices(encaixes)
-        for cor in pts:
-            vertices.append(cor)
-            
+        vertices.extend(pts)
+
+        # 8. Considera interseções extras vindas do NFP
         if nfp_intersec:
-            intersecção = extrair_vertices(nfp_intersec.intersection(ifp_polygon))
-            for ponto in intersecção:
+            intersecao = extrair_vertices(nfp_intersec.intersection(ifp_polygon))
+            for ponto in intersecao:
                 if ponto not in vertices:
                     vertices.append(ponto)
-        
-        # Armazena o resultado no cache antes de retornar
+
+        # 9. Salva no cache
         encaixes_area = encaixes.area if encaixes else 0
         self.dict_feasible[chave] = {'vertices': vertices, 'area': encaixes_area}
-        
+
+        # 10. Retorna
         if area:
             return vertices, encaixes_area
         else:
             return vertices
-        
-        
+ 
     def BL(self, peca, grau_indice):
         positions = self.feasible(peca,grau_indice)
         if not positions:
@@ -1257,6 +1304,7 @@ class SPP2D():
     def decoder(self, keys):
         
         if self.decoder_type == 'D0':
+            # print('1')
             rot = keys[:self.max_pecas]
             pieces = keys[self.max_pecas:]
             
@@ -1727,16 +1775,26 @@ if __name__ == '__main__':
     # instancias = ["fu","marques","swim"]    
     instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
-    decoders = ['D1_B']
-    for tempo in [3600]:    
-        for restart in [0.3]:
+    decoders = ['D0','D0_B']
+    for tempo in [1200]:    
+        for restart in [0.5]:
             for decoder in decoders:    
                 for ins in instancias:
                     list_time = []
                     list_cost = []
                     
                     env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
+                    i = 0
+                    start = time.time()
+                    while time.time() - start < 10:
+                        keys = np.random.random(env.tam_solution)
+                        sol = env.decoder(keys)
+                        print(env.cost(sol, save=False))
+                        
+                        i += 1
+                        
+                    print(i)
                     print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                     solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
-                    cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=5)
+                    cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
 
