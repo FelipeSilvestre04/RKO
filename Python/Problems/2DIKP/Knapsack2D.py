@@ -1148,7 +1148,7 @@ if __name__ == '__main__':
                     i = 0
                     env = Knapsack2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
                     start = time.time()
-                    while time.time() - start < 60:
+                    while time.time() - start < 10:
                         keys = np.random.random(env.tam_solution)
                         sol = env.decoder(keys)
                         print(env.cost(sol, save=False))

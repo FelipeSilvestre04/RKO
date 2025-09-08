@@ -10,7 +10,7 @@ import itertools
 from multiprocessing import Manager, Process, cpu_count
 
 class SolutionPool():
-    def __init__(self, size, pool, best_pair, lock=None, print=False, Best=None):
+    def __init__(self, size, pool, best_pair, lock=None, print=False, Best=None, env=None):
         self.size = size
         self.pool = pool
         self.best_pair = best_pair
@@ -18,6 +18,7 @@ class SolutionPool():
         self.start_time = time.time()    
         self.print = print 
         self.best_possible = Best
+        self.env = env
         
     def insert(self, entry_tuple, metaheuristic_name, tag): 
         fitness = entry_tuple[0]
@@ -25,6 +26,7 @@ class SolutionPool():
         # print(f"\rtempo = {round(time.time() - self.start_time,2)} ", end="")
         with self.lock:
             if fitness < self.best_pair[0]: 
+                # self.env.plot(legenda='[]')
                 self.best_pair[0] = fitness          
                 self.best_pair[1] = list(keys)        
                 self.best_pair[2] = round(self.start_time - time.time(), 2)
@@ -1371,7 +1373,7 @@ class RKO():
             shared.best_pair = manager.list([float('inf'), None, None])
             shared.best_pool = manager.list()
             
-            shared.pool = SolutionPool(20, shared.best_pool, shared.best_pair, lock=manager.Lock(), print=self.print_best, Best=self.env.dict_best[self.env.instance_name])
+            shared.pool = SolutionPool(20, shared.best_pool, shared.best_pair, lock=manager.Lock(), print=self.print_best, Best=self.env.dict_best[self.env.instance_name], env=self.env)
             for i in range(20):
                 keys = self.random_keys()
                 cost = self.env.cost(self.env.decoder(keys))

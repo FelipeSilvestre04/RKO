@@ -446,7 +446,6 @@ def plot_shapely_geometry(ax, geom, facecolor='lightblue', edgecolor='black', al
         patch = PathPatch(path, facecolor=facecolor, edgecolor=edgecolor, alpha=alpha, linewidth=linewidth)
         ax.add_patch(patch)
         
-      
 def NFP(PecaA, grauA, PecaB, grauB, env):
     """
     Executa a lógica da sua função NFP e plota os resultados intermediários,
@@ -518,33 +517,8 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
                         pontos_candidatos.add(ponto)
                 
     # # Une todas as geometrias de interseção encontradas
-    # min_x, min_y, max_x, max_y = nfp_unido.bounds
-    # padding = 1.0 
-
-    # # Itere sobre os vértices da Peça A
     # for ponto in pontos_pol_A:
-    #     x_vertice, y_vertice = ponto
-
-    #     # --- Raio Vertical para Cima ---
-    #     linha_cima = LineString([ponto, (x_vertice, max_y + padding)])
-    #     intersecao_cima = nfp_unido.boundary.intersection(linha_cima)
-    #     pontos_candidatos.update(extrair_vertices(intersecao_cima))
-
-    #     # --- Raio Vertical para Baixo ---
-    #     linha_baixo = LineString([ponto, (x_vertice, min_y - padding)])
-    #     intersecao_baixo = nfp_unido.boundary.intersection(linha_baixo)
-    #     pontos_candidatos.update(extrair_vertices(intersecao_baixo))
-
-    #     # --- Raio Horizontal para Direita ---
-    #     linha_direita = LineString([ponto, (max_x + padding, y_vertice)])
-    #     intersecao_direita = nfp_unido.boundary.intersection(linha_direita)
-    #     pontos_candidatos.update(extrair_vertices(intersecao_direita))
-
-    #     # --- Raio Horizontal para Esquerda ---
-    #     linha_esquerda = LineString([ponto, (min_x - padding, y_vertice)])
-    #     intersecao_esquerda = nfp_unido.boundary.intersection(linha_esquerda)
-    #     pontos_candidatos.update(extrair_vertices(intersecao_esquerda))
-        
+    #     pontos_candidatos.add(Point(ponto))
     # for ponto in pontos_pol_B:
     #     pontos_candidatos.add(Point(ponto))
     
@@ -646,61 +620,75 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     
    
     return nfp_unido, extrair_vertices(intersec)
+        
+# def NFP(PecaA, grauA, PecaB, grauB, env):
+#     graus = [0, 90, 180, 270]
+ 
+#     pontos_pol_A = env.rot_pol(env.lista.index(PecaA), grauA)
+#     pontos_pol_B = env.rot_pol(env.lista.index(PecaB), grauB)
+#     nfps_CB_CA = []
+
+#     if Polygon(pontos_pol_B).equals(Polygon(pontos_pol_B).convex_hull):
+#         convex_partsB = [pontos_pol_B] 
+#     else:
+#         convex_partsB = triangulate_shapely(pontos_pol_B)
+    
+#     if Polygon(pontos_pol_A).equals(Polygon(pontos_pol_A).convex_hull):
+#         convex_partsA = [pontos_pol_A]
+#     else:
+#         convex_partsA = triangulate_shapely(pontos_pol_A)
+
+#     nfps_convx = []
+#     for CB in convex_partsB:
+#         for convex in convex_partsA:
+#             # Assumindo que NoFitPolygon retorna uma lista de coordenadas
+#             nfps_convx.append(Polygon(NoFitPolygon(convex, CB)))
+
+#     nfp = unary_union(nfps_convx)
+#     intersec = intersection_all([nfp.boundary for nfp in nfps_convx])
+    
+#     return nfp, extrair_vertices(intersec)
+import numpy as np # Adicione esta importação se ainda não tiver
 
 def extrair_vertices(encaixes):
     if encaixes is None or encaixes.is_empty:
         return []
+    
     vertices = []
-    if isinstance(encaixes, MultiPolygon):
-        for poly in encaixes.geoms:
-            vertices.extend(list(poly.exterior.coords))
-            for hole in poly.interiors:
-                vertices.extend(list(hole.coords))
-    elif isinstance(encaixes, Polygon):
-        vertices.extend(list(encaixes.exterior.coords))
-        for hole in encaixes.interiors:
-            vertices.extend(list(hole.coords))
-    elif isinstance(encaixes, MultiLineString):
-        for line in encaixes.geoms:
-            vertices.extend(list(line.coords))
-    elif isinstance(encaixes, LineString):
-        vertices.extend(list(encaixes.coords))
-    elif isinstance(encaixes, Point):
-        vertices.append((encaixes.x, encaixes.y))
-    elif isinstance(encaixes, MultiPoint):
-        for pt in encaixes.geoms:
-            vertices.append((pt.x, pt.y))
+    # Usaremos um set para evitar pontos duplicados, que podem surgir da interpolação
+    pontos_unicos = set()
 
-    elif isinstance(encaixes, LinearRing):
-        vertices.extend(list(encaixes.coords))
+    # Estrutura unificada para processar qualquer tipo de geometria
+    geoms_to_process = getattr(encaixes, 'geoms', [encaixes])
 
-    elif isinstance(encaixes, GeometryCollection):
-        encaixe = encaixes
-        for encaixes in encaixe.geoms:
-            if isinstance(encaixes, MultiPolygon):
-                for poly in encaixes.geoms:
-                    vertices.extend(list(poly.exterior.coords))
-                    for hole in poly.interiors:
-                        vertices.extend(list(hole.coords))
-            elif isinstance(encaixes, Polygon):
-                vertices.extend(list(encaixes.exterior.coords))
-                for hole in encaixes.interiors:
-                    vertices.extend(list(hole.coords))
-            elif isinstance(encaixes, MultiLineString):
-                for line in encaixes.geoms:
-                    vertices.extend(list(line.coords))
-            elif isinstance(encaixes, LineString):
-                vertices.extend(list(encaixes.coords))
+    for geom in geoms_to_process:
+        if geom is None or geom.is_empty:
+            continue
+            
+        if isinstance(geom, Polygon):
+            for ponto in geom.exterior.coords: pontos_unicos.add(ponto)
+            for hole in geom.interiors:
+                for ponto in hole.coords: pontos_unicos.add(ponto)
 
-            elif isinstance(encaixes, Point):
-                vertices.append((encaixes.x, encaixes.y))
-            elif isinstance(encaixes, MultiPoint):
-                for pt in encaixes.geoms:
-                    vertices.append((pt.x, pt.y))
+        # --- LÓGICA DE DENSIFICAÇÃO ADICIONADA AQUI ---
+        elif isinstance(geom, (LineString, LinearRing)):
+            # Adiciona os vértices originais da linha
+            for ponto in geom.coords: pontos_unicos.add(ponto)
+            
+            # Interpola novos pontos ao longo da linha
+            distancia = 1.0 # Começa a interpolar a partir de 1 unidade
+            while distancia < geom.length:
+                ponto = geom.interpolate(distancia)
+                pontos_unicos.add((ponto.x, ponto.y))
+                distancia += 1.0 # Próximo ponto a 1 unidade de distância
+                
+            # print(pontos_unicos)
 
-            elif isinstance(encaixes, LinearRing):
-                vertices.extend(list(encaixes.coords))
+        elif isinstance(geom, Point):
+            pontos_unicos.add((geom.x, geom.y))
 
+    # Converte o set de pontos únicos de volta para uma lista
+    vertices = list(pontos_unicos)
     return vertices
 def rotate_point(x: float, y: float, angle_deg: float) -> Tuple[float, float]:
     """
@@ -798,10 +786,10 @@ class SPP2D():
         
         lista = ler_poligonos(self.dataset)
         
-        lista.sort(
-                key=lambda coords: Polygon(coords).area,
-                reverse=True
-            )
+        # lista.sort(
+        #         key=lambda coords: Polygon(coords).area,
+        #         reverse=True
+        #     )
   
         # print(lista)
         self.lista_original = lista
@@ -868,13 +856,13 @@ class SPP2D():
             
         elif self.decoder_type == 'D0_A' or self.decoder_type == 'D0':
             self.tam_solution = 2 * self.max_pecas 
-            self.regras = {
-            0: self.BL,
-            1: self.LB,
-            2: self.UL,
-            3: self.LU,
+        #     self.regras = {
+        #     0: self.BL,
+        #     1: self.LB,
+        #     2: self.UL,
+        #     3: self.LU,
 
-        }   
+        # }   
             self.regras = {
             0: self.BL,
             1: self.UL,
@@ -882,18 +870,18 @@ class SPP2D():
         }   
         elif self.decoder_type == 'D0_B':
             self.tam_solution = 3 * self.max_pecas
-            self.regras = {
-            0: self.BL,
-            1: self.LB,
-            2: self.UL,
-            3: self.LU,
-
-        }   
         #     self.regras = {
         #     0: self.BL,
-        #     1: self.UL,
+        #     1: self.LB,
+        #     2: self.UL,
+        #     3: self.LU,
 
-        # } 
+        # }   
+            self.regras = {
+            0: self.BL,
+            1: self.UL,
+
+        } 
             
         self.LS_type = 'Best'
         self.greedy = []
@@ -918,7 +906,6 @@ class SPP2D():
     
         self.dict_feasible = {}
         self.lista_anterior = []
-        self.best_fit = 100000
 
 
 
@@ -1016,7 +1003,6 @@ class SPP2D():
         nfps = []
         todos_pontos_de_encontro = []
 
-        # cria chave de prefixo (estado atual das peças posicionadas + peça nova)
         chaves = []
         for x2, y2, grau1, pol_idx in self.indices_pecas_posicionadas:
             chave = (
@@ -1026,99 +1012,90 @@ class SPP2D():
             chaves.append((chave, x2, y2))
         prefixo_t = tuple(chaves)
 
-        # se já calculou esse prefixo antes, retorna direto do cache
         if prefixo_t in self.dict_nfps:
             return self.dict_nfps[prefixo_t]
 
-        # caso contrário, calcula normalmente
         for (chave, x2, y2) in chaves:
             nfp_salvo = self.tabela_nfps.get(chave)
             if not nfp_salvo:
                 continue
 
-            coords_base_nfp = nfp_salvo[0]
-            pontos_intersec_base = nfp_salvo[1]
+            coords_base_nfp, pontos_intersec_base = nfp_salvo
 
             base_nfp = Polygon(coords_base_nfp)
             if base_nfp.is_empty:
                 continue
 
-            # translada o NFP
-            p = affinity.translate(base_nfp, xoff=x2, yoff=y2)
+            p = affinity.translate(base_nfp, xoff=x2, yoff=y2).buffer(0)
             nfps.append(p)
 
-            # translada pontos de interseção
             if pontos_intersec_base:
                 pontos_transladados = [(pt[0] + x2, pt[1] + y2) for pt in pontos_intersec_base]
-                todos_pontos_de_encontro.append((pontos_transladados, p))
+                todos_pontos_de_encontro.append(pontos_transladados)
 
         if not nfps:
             return None, None
 
-        # ocupado = unary_union(nfps)
-        ocupado = unary_union([nfp.buffer(-0.000001) for nfp in nfps])
-        # print(ocupado)
-        # self.prepared_nfps = [prep(nfp) for nfp in nfps]
-        # self.boundaries = [nfp.boundary for nfp in nfps]
-        
-
-        # pontos_validos = []
-        # print((pontos_validos))
+        ocupado = unary_union(nfps)
 
         pontos_validos = []
         if todos_pontos_de_encontro:
-            for pontos, nfp_origem in todos_pontos_de_encontro:
+            for i, pontos in enumerate(todos_pontos_de_encontro):
+                valido = True
                 for ponto in pontos:
-                    valido = True
-                    pt = Point(ponto)
-                    for nfp in nfps:
-                        if nfp == nfp_origem:
-                            continue
-                        if nfp.contains(pt):
+                    
+                    for j, nfp in enumerate(nfps):
+                        if nfp.contains(Point(ponto)) and i != j:
                             valido = False
                             break
                     if valido:
                         pontos_validos.append(ponto)
 
+        # pontos_candidatos = set()
+        # if len(nfps) > 1:
+        #     intersec_total = intersection_all([nfp.boundary for nfp in nfps])
+        #     if not intersec_total.is_empty:
+        #         pontos_candidatos.update(extrair_vertices(intersec_total))
+        #     for p1, p2 in itertools.combinations(nfps, 2):
+        #         intersec = p1.boundary.intersection(p2.boundary)
+        #         if not intersec.is_empty:
+        #             pontos_candidatos.update(extrair_vertices(intersec))
 
+        # for ponto in pontos_candidatos:
+        #     valido = True
+        #     for nfp in nfps:
+        #         if nfp.contains(Point(ponto)):
+        #             valido = False
+        #             break
+        #     if valido:
+        #         pontos_validos.append(ponto)
 
+        # agora nfp_intersec já sai como shapely
+        intersec_final = MultiPoint(pontos_validos) if pontos_validos else MultiPoint()
 
-        intersec_final = MultiPoint(pontos_validos ) if pontos_validos else None
-
-        # salva no cache antes de retornar
         self.dict_nfps[prefixo_t] = (ocupado, intersec_final)
+        return ocupado, intersec_final
 
-        return ocupado, intersec_final    
-    
     def feasible(self, peca, grau_indice, area=False):
         chave = tuple([peca, grau_indice, tuple(map(tuple, self.pecas_posicionadas))])
 
-        # 1. Verifica cache do feasible
         if chave in self.dict_feasible:
             cached_result = self.dict_feasible[chave]
-            if area:
-                return cached_result['vertices'], cached_result['area']
-            return cached_result['vertices']
+            return (cached_result['vertices'], cached_result['area']) if area else cached_result['vertices']
 
-        # 2. Calcula o Inner-Fit Polygon (área permitida dentro do bin)
         ifp_coords = self.ifp(peca, grau_indice)
         if not ifp_coords:
             return ([], 0) if area else []
 
         ifp_polygon = Polygon(ifp_coords)
 
-        # 3. Caso não haja peças já posicionadas → retorno simples
         if not self.pecas_posicionadas:
             vertices = list(ifp_polygon.exterior.coords)
             self.dict_feasible[chave] = {'vertices': vertices, 'area': ifp_polygon.area}
-            if area:
-                return vertices, ifp_polygon.area
-            return vertices
+            return (vertices, ifp_polygon.area) if area else vertices
 
-        # 4. Calcula o No-Fit Polygon combinado (já com cache agressivo no nfp)
         nfp_polygon, nfp_intersec = self.nfp(peca, grau_indice)
 
-        # 5. Interseção entre bordas IFP × NFP
         intersec = ifp_polygon.boundary.intersection(nfp_polygon.boundary) if nfp_polygon else None
         pts = []
         if intersec and not intersec.is_empty:
@@ -1129,37 +1106,23 @@ class SPP2D():
                     if hasattr(part, 'coords'):
                         pts.extend(list(part.coords))
 
-        # 6. Diferença (área factível)
-        if nfp_polygon and not nfp_polygon.is_empty:
-            encaixes = ifp_polygon.difference(nfp_polygon)
-        else:
-            encaixes = ifp_polygon
+        encaixes = ifp_polygon.difference(nfp_polygon) if (nfp_polygon and not nfp_polygon.is_empty) else ifp_polygon
 
-        # 7. Extrai vértices da área
         vertices = extrair_vertices(encaixes)
         vertices.extend(pts)
 
-        # 8. Considera interseções extras vindas do NFP
-        # if nfp_intersec:
-            
-        #     for ponto in extrair_vertices(nfp_intersec):
-        #         vertices.append(ponto)
-                
-        if nfp_intersec:
-            intersecao = extrair_vertices(nfp_intersec.intersection(ifp_polygon))
-            for ponto in intersecao:
+        # agora o intersec já é shapely: MultiPoint
+        if nfp_intersec and not nfp_intersec.is_empty:
+            intersecao = nfp_intersec.intersection(ifp_polygon.boundary)
+            for ponto in extrair_vertices(intersecao):
                 if ponto not in vertices:
                     vertices.append(ponto)
 
-        # 9. Salva no cache
         encaixes_area = encaixes.area if encaixes else 0
         self.dict_feasible[chave] = {'vertices': vertices, 'area': encaixes_area}
 
-        # 10. Retorna
-        if area:
-            return vertices, encaixes_area
-        else:
-            return vertices
+        return (vertices, encaixes_area) if area else vertices
+
  
     def BL(self, peca, grau_indice):
         positions = self.feasible(peca,grau_indice)
@@ -1341,7 +1304,7 @@ class SPP2D():
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
             regras_idx = []
-            tipos_regras = 4
+            tipos_regras = 2
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
@@ -1482,12 +1445,9 @@ class SPP2D():
                 fit = -1 * self.area_usada()
                 # print(self.counter, fit)
                 self.dict_sol[tuple(sol)] = fit
-                if fit <= self.best_fit:
-                    self.best_fit = fit
-                    # # if fit == self.dict_best[self.instance_name]:
-                    # if fit < -81:
-                    #     self.plot(f"[]")
-                    #     print(f"New best: {fit} | {round(self.start_time - time.time(),2)}s")
+                if save:
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
                 self.reset()
                 # self.base = self.base / shrink_factor
                 # print(self.base) 
@@ -1769,14 +1729,14 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    # instancias = ["fu""jackobs1",,"marques","swim"]    
-    instancias = ["jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
+    # instancias = ["fu","marques","swim"]    
+    instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
-    decoders = ['D0_A','D0_B','D0']
+    decoders = ['D0','D0_B']
     for tempo in [1200]:    
-        for restart in [0.5]:                
-            for ins in instancias:
-                for decoder in decoders:
+        for restart in [0.5]:
+            for decoder in decoders:    
+                for ins in instancias:
                     list_time = []
                     list_cost = []
                     
@@ -1791,7 +1751,6 @@ if __name__ == '__main__':
                     #     i += 1
                         
                     # print(i)
-
                     print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                     solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
                     cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)

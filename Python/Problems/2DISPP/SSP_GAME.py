@@ -1,4 +1,4 @@
-from SPP2D import SPP2D
+from SPP2D_O import SPP2D
 
 import pygame
 import sys
@@ -442,7 +442,7 @@ class Visualizer:
 if __name__ == '__main__':
     
 
-    meu_ambiente_spp = SPP2D(dataset='jackobs2' )
+    meu_ambiente_spp = SPP2D(dataset='fu' )
 
 
 

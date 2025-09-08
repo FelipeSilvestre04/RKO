@@ -446,7 +446,6 @@ def plot_shapely_geometry(ax, geom, facecolor='lightblue', edgecolor='black', al
         patch = PathPatch(path, facecolor=facecolor, edgecolor=edgecolor, alpha=alpha, linewidth=linewidth)
         ax.add_patch(patch)
         
-      
 def NFP(PecaA, grauA, PecaB, grauB, env):
     """
     Executa a lógica da sua função NFP e plota os resultados intermediários,
@@ -646,7 +645,34 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     
    
     return nfp_unido, extrair_vertices(intersec)
+        
+# def NFP(PecaA, grauA, PecaB, grauB, env):
+#     graus = [0, 90, 180, 270]
+ 
+#     pontos_pol_A = env.rot_pol(env.lista.index(PecaA), grauA)
+#     pontos_pol_B = env.rot_pol(env.lista.index(PecaB), grauB)
+#     nfps_CB_CA = []
 
+#     if Polygon(pontos_pol_B).equals(Polygon(pontos_pol_B).convex_hull):
+#         convex_partsB = [pontos_pol_B] 
+#     else:
+#         convex_partsB = triangulate_shapely(pontos_pol_B)
+    
+#     if Polygon(pontos_pol_A).equals(Polygon(pontos_pol_A).convex_hull):
+#         convex_partsA = [pontos_pol_A]
+#     else:
+#         convex_partsA = triangulate_shapely(pontos_pol_A)
+
+#     nfps_convx = []
+#     for CB in convex_partsB:
+#         for convex in convex_partsA:
+#             # Assumindo que NoFitPolygon retorna uma lista de coordenadas
+#             nfps_convx.append(Polygon(NoFitPolygon(convex, CB)))
+
+#     nfp = unary_union(nfps_convx)
+#     intersec = intersection_all([nfp.boundary for nfp in nfps_convx])
+    
+#     return nfp, extrair_vertices(intersec)
 def extrair_vertices(encaixes):
     if encaixes is None or encaixes.is_empty:
         return []
@@ -798,10 +824,10 @@ class SPP2D():
         
         lista = ler_poligonos(self.dataset)
         
-        lista.sort(
-                key=lambda coords: Polygon(coords).area,
-                reverse=True
-            )
+        # lista.sort(
+        #         key=lambda coords: Polygon(coords).area,
+        #         reverse=True
+        #     )
   
         # print(lista)
         self.lista_original = lista
@@ -868,13 +894,13 @@ class SPP2D():
             
         elif self.decoder_type == 'D0_A' or self.decoder_type == 'D0':
             self.tam_solution = 2 * self.max_pecas 
-            self.regras = {
-            0: self.BL,
-            1: self.LB,
-            2: self.UL,
-            3: self.LU,
+        #     self.regras = {
+        #     0: self.BL,
+        #     1: self.LB,
+        #     2: self.UL,
+        #     3: self.LU,
 
-        }   
+        # }   
             self.regras = {
             0: self.BL,
             1: self.UL,
@@ -882,18 +908,18 @@ class SPP2D():
         }   
         elif self.decoder_type == 'D0_B':
             self.tam_solution = 3 * self.max_pecas
-            self.regras = {
-            0: self.BL,
-            1: self.LB,
-            2: self.UL,
-            3: self.LU,
-
-        }   
         #     self.regras = {
         #     0: self.BL,
-        #     1: self.UL,
+        #     1: self.LB,
+        #     2: self.UL,
+        #     3: self.LU,
 
-        # } 
+        # }   
+            self.regras = {
+            0: self.BL,
+            1: self.UL,
+
+        } 
             
         self.LS_type = 'Best'
         self.greedy = []
@@ -918,7 +944,6 @@ class SPP2D():
     
         self.dict_feasible = {}
         self.lista_anterior = []
-        self.best_fit = 100000
 
 
 
@@ -1050,31 +1075,27 @@ class SPP2D():
             # translada pontos de interseção
             if pontos_intersec_base:
                 pontos_transladados = [(pt[0] + x2, pt[1] + y2) for pt in pontos_intersec_base]
-                todos_pontos_de_encontro.append((pontos_transladados, p))
+                todos_pontos_de_encontro.append(pontos_transladados)
 
         if not nfps:
             return None, None
 
-        # ocupado = unary_union(nfps)
+        ocupado = unary_union(nfps)
         ocupado = unary_union([nfp.buffer(-0.000001) for nfp in nfps])
         # print(ocupado)
         # self.prepared_nfps = [prep(nfp) for nfp in nfps]
         # self.boundaries = [nfp.boundary for nfp in nfps]
         
 
-        # pontos_validos = []
+        pontos_validos = []
         # print((pontos_validos))
 
-        pontos_validos = []
         if todos_pontos_de_encontro:
-            for pontos, nfp_origem in todos_pontos_de_encontro:
+            for i, pontos in enumerate(todos_pontos_de_encontro):
                 for ponto in pontos:
                     valido = True
-                    pt = Point(ponto)
-                    for nfp in nfps:
-                        if nfp == nfp_origem:
-                            continue
-                        if nfp.contains(pt):
+                    for j, nfp in enumerate(nfps):
+                        if nfp.contains(Point(ponto)) and i != j:
                             valido = False
                             break
                     if valido:
@@ -1088,8 +1109,27 @@ class SPP2D():
         # salva no cache antes de retornar
         self.dict_nfps[prefixo_t] = (ocupado, intersec_final)
 
-        return ocupado, intersec_final    
+        return ocupado, intersec_final
     
+        # if len(nfps) > 1:
+        #     intersec_total = intersection_all([nfp.boundary for nfp in nfps])
+        #     if not intersec_total.is_empty:
+        #         for ponto in extrair_vertices(intersec_total):
+        #             pontos_candidatos.add(ponto)
+            # for p1, p2 in itertools.combinations(nfps, 2):
+            #     intersec = p1.boundary.intersection(p2.boundary)
+            #     if not intersec.is_empty:
+            #         for ponto in extrair_vertices(intersec):
+            #             pontos_candidatos.add(ponto)
+
+        # for ponto in pontos_candidatos:
+        #     valido = True
+        #     for nfp in nfps:
+        #         if nfp.contains(Point(ponto)):
+        #             valido = False
+        #             break
+        #     if valido:
+        #         pontos_validos.append(ponto)
     def feasible(self, peca, grau_indice, area=False):
         chave = tuple([peca, grau_indice, tuple(map(tuple, self.pecas_posicionadas))])
 
@@ -1341,7 +1381,7 @@ class SPP2D():
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
             regras_idx = []
-            tipos_regras = 4
+            tipos_regras = 2
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
@@ -1482,12 +1522,9 @@ class SPP2D():
                 fit = -1 * self.area_usada()
                 # print(self.counter, fit)
                 self.dict_sol[tuple(sol)] = fit
-                if fit <= self.best_fit:
-                    self.best_fit = fit
-                    # # if fit == self.dict_best[self.instance_name]:
-                    # if fit < -81:
-                    #     self.plot(f"[]")
-                    #     print(f"New best: {fit} | {round(self.start_time - time.time(),2)}s")
+                if save:
+                    if fit == self.dict_best[self.instance_name]:
+                        self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
                 self.reset()
                 # self.base = self.base / shrink_factor
                 # print(self.base) 
@@ -1769,29 +1806,28 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    # instancias = ["fu""jackobs1",,"marques","swim"]    
-    instancias = ["jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
+    # instancias = ["fu","marques","swim"]    
+    instancias = ["fu","jackobs1","jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
-    decoders = ['D0_A','D0_B','D0']
+    decoders = ['D0','D0_B']
     for tempo in [1200]:    
-        for restart in [0.5]:                
-            for ins in instancias:
-                for decoder in decoders:
+        for restart in [0.5]:
+            for decoder in decoders:    
+                for ins in instancias:
                     list_time = []
                     list_cost = []
                     
                     env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
-                    # i = 0
-                    # start = time.time()
-                    # while time.time() - start < 10:
-                    #     keys = np.random.random(env.tam_solution)
-                    #     sol = env.decoder(keys)
-                    #     print(env.cost(sol, save=False))
+                    i = 0
+                    start = time.time()
+                    while time.time() - start < 10:
+                        keys = np.random.random(env.tam_solution)
+                        sol = env.decoder(keys)
+                        print(env.cost(sol, save=False))
                         
-                    #     i += 1
+                        i += 1
                         
-                    # print(i)
-
+                    print(i)
                     print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
                     solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
                     cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
