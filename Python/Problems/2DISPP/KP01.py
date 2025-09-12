@@ -1571,11 +1571,11 @@ class SPP2D():
                 fit = -1 * self.area_usada()
                 # print(self.counter, fit)
                 self.dict_sol[tuple(sol)] = fit
-                if fit < self.best_fit:
-                    self.best_fit = fit
-                    # if fit == self.dict_best[self.instance_name]:
+                # if fit < self.best_fit:
+                #     self.best_fit = fit
+                #     # if fit == self.dict_best[self.instance_name]:
                     
-                    self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                #     self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
                     
                 self.reset()
                 # self.base = self.base / shrink_factor
@@ -1868,7 +1868,7 @@ class SPP2D():
 
 if __name__ == '__main__':
     # instancias = ["fu""jackobs1",,"marques","swim"]    
-    instancias = ["jackobs1","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dighe1","dighe2","dagli","mao","marques","swim"] 
+    instancias = ["jackobs1","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dighe1","dighe2","dagli","mao","marques","swim","fu"] 
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
     decoders = ['D0_B']
     for fd in range(10):
@@ -1892,6 +1892,6 @@ if __name__ == '__main__':
                         # print(i)
 
                         print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                        solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_KP01\\{decoder}_KP_{tempo}_{restart}\\testes_RKO.csv')
+                        solver = RKO(env, print_best=False, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_KP01\\{decoder}_KP_{tempo}_{restart}\\testes_RKO.csv')
                         cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
 
