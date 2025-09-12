@@ -653,14 +653,7 @@ class Knapsack2D():
     
         self.dict_feasible = {}
         
-
-
-
-
-
-
     
-        
     def acao(self,peca,x,y,grau_idx):
         peca_posicionar = self.rot_pol(peca, grau_idx)
 

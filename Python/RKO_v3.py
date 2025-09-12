@@ -35,14 +35,14 @@ class SolutionPool():
                     if tag == -1:
                         # if metaheuristic_name == 'pool':
                         if self.best_possible is not None :
-                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - BEST: {self.best_possible} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}") 
+                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - BEST: {self.best_possible} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}", flush=True) 
                         else:
-                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}")    
+                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}", flush=True)    
                     else:
                         if self.best_possible is not None :
-                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - BEST: {self.best_possible} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}") 
+                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - BEST: {self.best_possible} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}", flush=True) 
                         else:
-                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}")                
+                            print(f"\n{metaheuristic_name} NOVO MELHOR: {fitness} - Tempo: {round(self.start_time - time.time(), 2)}s - {len(self.pool)}", flush=True)                
             bisect.insort(self.pool, entry_tuple) 
             if len(self.pool) > self.size:
                 self.pool.pop()
@@ -1330,7 +1330,7 @@ class RKO():
     def stop_condition(self, best_cost, metaheuristic_name, tag, pool = None):
         if time.time() - self.start_time > self.max_time:
             if self.print_best and tag != -1:
-                print(f"{metaheuristic_name}: ENCERRADO")
+                print(f"{metaheuristic_name}: ENCERRADO", flush=True)
             return True
         
         
@@ -1359,7 +1359,7 @@ class RKO():
         times = []
         costs = []
         for i in range(runs):
-            print(f'Instancia: {self.env.instance_name}, Execução: {i+1}/{runs}')
+            print(f'Instancia: {self.env.instance_name}, Execução: {i+1}/{runs}', flush=True)
             limit_time = time_total * restart
             
             restarts = int(1/restart)
@@ -1463,7 +1463,7 @@ class RKO():
                     
                 for p in processes:
                     if p.is_alive():
-                        print(f"Processo {p.pid} estourou o tempo e será terminado.")
+                        print(f"Processo {p.pid} estourou o tempo e será terminado.", flush=True)
                         p.terminate() # Força o encerramento do processo
 
             cost = shared.pool.best_pair[0]

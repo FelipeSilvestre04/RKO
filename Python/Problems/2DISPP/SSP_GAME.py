@@ -1,4 +1,4 @@
-from SPP2D_O import SPP2D
+from SPP2D import SPP2D
 
 import pygame
 import sys

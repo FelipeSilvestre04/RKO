@@ -792,8 +792,10 @@ class SPP2D():
             self.escala = Escala
             self.graus = Graus
             
-        self.base*= 2
+        # self.base*= 2
         self.area = self.base * self.altura
+        self.base_inicial = self.base
+        self.inicial = False
         
         
         lista = ler_poligonos(self.dataset)
@@ -995,20 +997,26 @@ class SPP2D():
 
         minx = min([x for x,y in peca])
         miny = min([y for x,y in peca])
-
+    
         if (maxx - minx) > (self.base) or (maxy - miny) > (self.altura):
             return []
         
         cords = self.cordenadas_area
         # print(cords)
 
-        v0 = (cords[0][0]- minx , cords[0][1] - miny)
-        v1 = (cords[1][0]- maxx , cords[1][1] - miny)
-        v2 = (cords[2][0]- maxx , cords[2][1] - maxy)
-        v3 = (cords[3][0]- minx , cords[3][1] - maxy)
+        v0 = (0 - minx, 0 - miny)
+
+        # Vértice inferior direito (base, 0)
+        v1 = (self.base - maxx, 0 - miny)
+
+        # Vértice superior direito (base, altura)
+        v2 = (self.base - maxx, self.altura - maxy)
+
+        # Vértice superior esquerdo (0, altura)
+        v3 = (0 - minx, self.altura - maxy)
         
         ifp = [v0,v1,v2,v3]
-        # print(ifp)
+ 
         # print('\n')
         return ifp
     
@@ -1091,18 +1099,19 @@ class SPP2D():
         return ocupado, intersec_final    
     
     def feasible(self, peca, grau_indice, area=False):
-        chave = tuple([peca, grau_indice, tuple(map(tuple, self.pecas_posicionadas))])
+        # chave = tuple([peca, grau_indice, tuple(map(tuple, self.pecas_posicionadas)), self.base, self.altura])
 
-        # 1. Verifica cache do feasible
-        if chave in self.dict_feasible:
-            cached_result = self.dict_feasible[chave]
-            if area:
-                return cached_result['vertices'], cached_result['area']
-            return cached_result['vertices']
+        # # 1. Verifica cache do feasible
+        # if chave in self.dict_feasible:
+        #     cached_result = self.dict_feasible[chave]
+        #     if area:
+        #         return cached_result['vertices'], cached_result['area']
+        #     return cached_result['vertices']
 
         # 2. Calcula o Inner-Fit Polygon (área permitida dentro do bin)
         ifp_coords = self.ifp(peca, grau_indice)
         if not ifp_coords:
+           
             return ([], 0) if area else []
 
         ifp_polygon = Polygon(ifp_coords)
@@ -1110,9 +1119,10 @@ class SPP2D():
         # 3. Caso não haja peças já posicionadas → retorno simples
         if not self.pecas_posicionadas:
             vertices = list(ifp_polygon.exterior.coords)
-            self.dict_feasible[chave] = {'vertices': vertices, 'area': ifp_polygon.area}
+            # self.dict_feasible[chave] = {'vertices': vertices, 'area': ifp_polygon.area}
             if area:
                 return vertices, ifp_polygon.area
+            
             return vertices
 
         # 4. Calcula o No-Fit Polygon combinado (já com cache agressivo no nfp)
@@ -1153,12 +1163,13 @@ class SPP2D():
 
         # 9. Salva no cache
         encaixes_area = encaixes.area if encaixes else 0
-        self.dict_feasible[chave] = {'vertices': vertices, 'area': encaixes_area}
+        # self.dict_feasible[chave] = {'vertices': vertices, 'area': encaixes_area}
 
         # 10. Retorna
         if area:
             return vertices, encaixes_area
         else:
+            
             return vertices
  
     def BL(self, peca, grau_indice):
@@ -1168,6 +1179,23 @@ class SPP2D():
         positions_bl = sorted(positions, key=lambda ponto: (ponto[0], ponto[1]))        
         bl = positions_bl[0]        
         return bl
+    
+    def NBL(self, peca, grau_indice):
+        positions = self.feasible(peca,grau_indice)
+        if not positions:
+            return []      
+        positions_bl = sorted(positions, key=lambda ponto: (ponto[0]**2 + ponto[1]**2))        
+        nbl = positions_bl[0] 
+              
+        return nbl
+    
+    def NUL(self, peca, grau_indice):
+        positions = self.feasible(peca,grau_indice)
+        if not positions:
+            return []      
+        positions_bl = sorted(positions, key=lambda ponto: (ponto[0]**2 + (self.base - ponto[1])**2))        
+        nul = positions_bl[0]        
+        return nul
         
     def LB(self, peca, grau_indice):
         positions = self.feasible(peca,grau_indice)
@@ -1276,13 +1304,14 @@ class SPP2D():
             
             pos = self.regras[regra_idx](peca, grau_indice)
             
+            
             if pos:
                 # print(pos)
                 self.acao(peca, pos[0], pos[1], grau_indice)
                 # base = self.base
                 # self.base
                 # if time.time() - self.start_time > 20:
-                # self.plot(legenda='[]')
+                #     self.plot(legenda='[]')
                 return True
             return False
         
@@ -1351,18 +1380,21 @@ class SPP2D():
                 
         elif self.decoder_type == 'D1_A':
             rot = keys[:self.max_pecas]
-            nfp_key = keys[self.max_pecas:-1]
-            shrink_key = (keys[-1]/5)+0.8
+            regras = keys[self.max_pecas:-1]
+            shrink_key = keys[-1]
             
             rot_idx = []
             tipos_rot = len(self.graus)
             for key in rot:
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
-  
+            regras_idx = []
+            tipos_regras = 8
+            for key in regras:
+                regras_idx.append(int(key * tipos_regras))
                 
-           
-            return rot_idx + list(nfp_key) + [shrink_key]
+            # print(rot_idx + regras_idx)
+            return rot_idx + regras_idx + [shrink_key]
           
         elif self.decoder_type == 'D1_B':
             pieces = keys[:self.max_pecas]            
@@ -1540,37 +1572,88 @@ class SPP2D():
                 return self.dict_sol[tuple(sol)]
             else:
                 rot = sol[:self.max_pecas]
-                nfp_key = sol[self.max_pecas:-1]
+                regras = sol[self.max_pecas:-1]
                 shrink_factor = sol[-1]
                 
-                self.base = self.base * shrink_factor
+                base_antigo = self.base
+                if self.inicial == False and self.base == self.base_inicial:
+                    pass
+                else:
+                    self.base = ((self.base - 0.99*self.base) * shrink_factor) + 0.99*self.base
+                # print(base_antigo, self.base, shrink_factor)
                 
                 i = 0
+                nao_posicionadas = []
                 for peca in self.lista_original:
                     # print(i)
-                    self.pack(self.lista.index(peca),rot[i], nfp_key[i], regra=False)
+                    packed = self.pack(self.lista.index(peca),rot[i], regras[i])
+                    if not packed:
+                        nao_posicionadas.append((peca,i))
+                        
                     i+=1
                     # self.plot()
                 
                 
                 # if self.lista == []:
-                    # self.plot()
+                #     self.plot()
                 pecas = len(self.pecas_posicionadas)
-                self.base = self.base / shrink_factor
                 
-                if len(self.pecas_posicionadas) == self.max_pecas:    
+                
+                if len(self.pecas_posicionadas) == self.max_pecas: 
+                    self.inicial = True   
                     fit = -1 * self.area_usada()
                     # print(self.counter, fit)
                     self.dict_sol[tuple(sol)] = fit
-                    if save:
-                        if fit == self.dict_best[self.instance_name]:
-                            self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    # if save:
+                    #     if fit == self.dict_best[self.instance_name]:
+                    #         self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    # if round(fit,1) < round(self.best_fit,1) and fit < 0.95 * self.dict_best[self.instance_name]:
+                    #     self.best_fit = fit
+                    #     # if fit == self.dict_best[self.instance_name]:
+                        
+                    #     self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
                     self.reset()
+                    
                     return fit
                 else:
+                    d = random.randint(0,10000)
+                   
+                    # print(d,self.base, base_antigo)
+                    self.base = base_antigo 
+                    # print(d,self.base, base_antigo)
                     
-                    fit = sum([Polygon(pol).area for pol in self.lista]) * 100 / (self.base * self.altura)
+                    
+                    for peca,idx in nao_posicionadas:
+     
+                        self.pack(self.lista.index(peca),rot[idx], regras[idx])
+              
+                        
+                    fit = -1 * self.area_usada()                    
+                    
+                   
+                    # print(d,self.base, base_antigo)
+                        
+                    
+
+                        
+                    if len(self.pecas_posicionadas) != self.max_pecas:
+                        # print(len(self.pecas_posicionadas), self.max_pecas, fit)
+                        fit = sum([Polygon(pol).area for pol in self.lista]) * 100 / (self.base * self.altura)
+                        self.reset()
+                        self.dict_sol[tuple(sol)] = fit
+                        return fit
+                    
+                    # if round(fit,1) < round(self.best_fit,1) and fit < 0.95 * self.dict_best[self.instance_name]:
+                    #     self.best_fit = fit
+                    #     # if fit == self.dict_best[self.instance_name]:
+                        
+                    #     self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    
+                    if len(self.pecas_posicionadas) != self.max_pecas:
+                        print("EROOROROROROR")
+                    self.inicial = True
                     self.reset()
+                    self.dict_sol[tuple(sol)] = fit
                     return fit
         elif self.decoder_type == 'D1_B':
             if tuple(sol) in self.dict_sol:
@@ -1598,6 +1681,8 @@ class SPP2D():
             if save:
                 if fit == self.dict_best[self.instance_name]:
                     self.plot(f"{round(self.start_time - time.time(),2)} | {fit} | {len(self.pecas_posicionadas)}/{self.max_pecas}")
+                    
+                    
             self.reset()
             return fit
         
@@ -1676,7 +1761,7 @@ class SPP2D():
         
             
     def plot(self, legenda):
-        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Images\\SPP\\{self.instance_name}\\{self.instance_name}_{time.time()}.png')
+        draw_cutting_area(self.pecas_posicionadas, self.base, self.altura ,legenda=legenda, filename=f'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Images\\SPP\\{self.instance_name}\\{self.instance_name}_{time.time()}.png')
     
     def get_used_width(self):
         original_counter = Counter(tuple(map(tuple, pol)) for pol in self.lista_original)
@@ -1776,11 +1861,11 @@ class SPP2D():
 
 if __name__ == '__main__':
     # instancias = ["fu""jackobs1",,"marques","swim"]    
-    instancias = ["jackobs2","shapes0","shapes1","shapes2","albano","shirts","trousers","dighe1","dighe2","dagli","mao","marques","swim"] 
+    instancias = ["fu","jackobs1","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dighe1","dighe2","dagli","mao","marques","swim"] 
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
-    decoders = ['D0_A','D0_B','D0']
+    decoders = ['D1_A']
     for fd in range(10):
-        for tempo in [1200]:    
+        for tempo in [2400]:    
             for restart in [0.5]:                
                 for ins in instancias:
                     for decoder in decoders:
@@ -1800,6 +1885,6 @@ if __name__ == '__main__':
                         # print(i)
 
                         print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                        solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
+                        solver = RKO(env, print_best=False, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
                         cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
 
