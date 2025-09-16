@@ -27,7 +27,11 @@ import math
 from typing import List, Tuple, Union
 import sys
 from shapely import affinity
-sys.path.append(os.path.abspath("c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
+import matplotlib.pyplot as plt
+from shapely.geometry import Polygon, MultiPolygon, Point, LineString
+from shapely.ops import unary_union
+from shapely.affinity import translate
+sys.path.append(os.path.abspath("C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python"))
 
 from RKO_v3 import RKO
 
@@ -172,7 +176,7 @@ def multiplicar_tudo(d, multiplicador):
     return novo_dicionario
 
 def ler_poligonos(arquivo, escala=1):
-    with open( 'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DISPP\\' + arquivo + '.dat', 'r') as f:
+    with open( 'C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python\\Problems\\2DISPP\\' + arquivo + '.dat', 'r') as f:
         conteudo = f.read().strip()
 
     # Divide o conteúdo em linhas
@@ -482,6 +486,10 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
 
     if not nfps_convx:
         print("Nenhum NFP parcial foi gerado.")
+        while True:
+            print(len(convex_partsA), len(convex_partsB))
+            print(PecaA)
+            print(PecaB)
         return Polygon(), None
 
     nfp_unido = unary_union(nfps_convx)
@@ -723,7 +731,7 @@ def calcular_shrink_factor(x):
         return 1 + 0.1 * math.log10(x)
 
 class SPP2D():
-    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200, decoder = 'D1'):
+    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200, decoder = 'D1', pairwise = False):
         self.decoder_type = decoder
         
         self.save_q_learning_report = True
@@ -810,22 +818,32 @@ class SPP2D():
         
         
         self.lista = copy.deepcopy(self.lista_original)
-        self.max_pecas = len(self.lista_original)
         
 
+        porcentagens_por_dataset = {
+            'albano': 0.0,
+            'dagli': 0.20,
+            'dighe1': 0.0,
+            'dighe2': 0.0,
+            'fu': 0.0,
+            'jackobs1': 0.20,
+            'jackobs2': 0.40,
+            'mao': 0.0,
+            'marques': 0.10,
+            'shapes0': 0.0,
+            'shapes1': 0.0,
+            'shapes2': 0.25,
+            'shirts': 0.0,
+            'swim': 0.15,
+            'trousers': 0.0
+        }
+        
+        porcentagem = porcentagens_por_dataset.get(self.dataset.lower(), 0.0)
+
+
 
             
-        if tabela is not None:
-            self.tabela_nfps = tabela
-        elif os.path.exists(f"nfp_{self.dataset}.txt"):
-            with open(f"nfp_{self.dataset}.txt", "r") as f:
-                conteudo = f.read()
-            self.tabela_nfps = ast.literal_eval(conteudo)
-            
-        else:
-            self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
-            with open(f"nfp_{self.dataset}.txt", "w") as f:
-                f.write(repr(self.tabela_nfps))
+
             
             
       
@@ -843,6 +861,80 @@ class SPP2D():
         
 
         self.dict_sol = {}
+
+        #     self.regras = {
+        #     0: self.BL,
+        #     1: self.UL,
+
+        # } 
+            
+        self.LS_type = 'Best'
+        self.greedy = []
+        self.dict_best = {
+                    "fu": -92.41,
+                    "jackobs1": -89.10,
+                    "jackobs2": -87.73,
+                    "shapes0": -68.79,
+                    "shapes1": -76.73,
+                    "shapes2": -84.84,
+                    "dighe1": -100.00,
+                    "dighe2": -100.00,
+                    "albano": -89.58,
+                    "dagli": -89.51,
+                    "mao": -85.44,
+                    "marques": -90.59,
+                    "shirts": -88.96,
+                    "swim": -75.94,
+                    "trousers": -91.00
+                }
+        
+    
+        self.dict_feasible = {}
+        self.lista_anterior = []
+        self.best_fit = 100000
+
+        if tabela is not None:
+            self.tabela_nfps = tabela
+        
+        elif os.path.exists(f"nfp_{self.dataset}.txt") and  (not pairwise or porcentagem ==0.0):
+            with open(f"nfp_{self.dataset}.txt", "r") as f:
+                conteudo = f.read()
+            self.tabela_nfps = ast.literal_eval(conteudo)
+            
+        elif os.path.exists(f"nfp_{self.dataset}_pairwise.txt") and pairwise:
+
+            with open(f"nfp_{self.dataset}.txt", "r") as f:
+                conteudo = f.read()
+            self.tabela_nfps = ast.literal_eval(conteudo)
+
+            porcentagem = porcentagens_por_dataset.get(self.dataset.lower(), 0.0)
+            pares_selecionados = self.pairwise(porcentagem_cluster=porcentagem)
+            self.lista = self.criar_lista_clusterizada(pares_selecionados)
+            self.lista_original = copy.deepcopy(self.lista)
+        
+            with open(f"nfp_{self.dataset}_pairwise.txt", "r") as f:
+                conteudo = f.read()
+            self.tabela_nfps = ast.literal_eval(conteudo)
+
+        elif not pairwise:
+            self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
+            with open(f"nfp_{self.dataset}.txt", "w") as f:
+                f.write(repr(self.tabela_nfps))
+        elif pairwise:
+            with open(f"nfp_{self.dataset}.txt", "r") as f:
+                conteudo = f.read()
+            self.tabela_nfps = ast.literal_eval(conteudo)
+        
+            porcentagem = porcentagens_por_dataset.get(self.dataset.lower(), 0.0)
+            pares_selecionados = self.pairwise(porcentagem_cluster=porcentagem)
+            self.lista = self.criar_lista_clusterizada(pares_selecionados)
+            self.lista_original = copy.deepcopy(self.lista)
+
+            self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
+            with open(f"nfp_{self.dataset}_pairwise.txt", "w") as f:
+                f.write(repr(self.tabela_nfps))
+
+        self.max_pecas = len(self.lista_original)
         if self.decoder_type == 'D1_A' or self.decoder_type == 'D2_A':
             self.tam_solution = 2 * self.max_pecas + 1
             self.regras = {
@@ -891,44 +983,369 @@ class SPP2D():
             3: self.LU,
 
         }   
-        #     self.regras = {
-        #     0: self.BL,
-        #     1: self.UL,
 
-        # } 
+        # 3. Obtenha a porcentagem correta para o dataset atual (ou 0% como padrão)
+        # Em seu script main ou onde você está executando a lógica
+
+        # As duas primeiras linhas estão corretas
+
+        # print(nova_lista)
+
+
+
+      
+    def plot_pairwise_geometries(self, peca1_poly, peca2_poly, nfp_poly, titulo="", filepath="."):
+        """
+        Salva uma imagem com as geometrias envolvidas na análise de um par de peças.
+        """
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        # Plota a Peça 1 (fixa, na origem)
+        x, y = peca1_poly.exterior.xy
+        ax.fill(x, y, alpha=0.6, fc='blue', ec='black', label='Peça 1 (Fixa)')
+
+        # Plota a Peça 2 (posicionada em um vértice do NFP)
+        x, y = peca2_poly.exterior.xy
+        ax.fill(x, y, alpha=0.6, fc='green', ec='black', label='Peça 2 (Móvel)')
+
+        # Plota o NFP
+        if nfp_poly and not nfp_poly.is_empty:
+            x, y = nfp_poly.exterior.xy
+            ax.plot(x, y, color='red', linestyle='--', linewidth=2, label='NFP')
+
+        ax.set_aspect('equal', adjustable='box')
+        ax.legend()
+        # Usa apenas a primeira linha do título para o nome do arquivo, removendo caracteres inválidos
+        safe_filename = titulo.split('\n')[0].replace(' | ', '_').replace(':', '').replace('.', 'p') + ".png"
+        ax.set_title(titulo)
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+        
+        # Garante que o diretório para salvar a imagem exista
+        os.makedirs(filepath, exist_ok=True)
+        full_path = os.path.join(filepath, safe_filename)
+        
+        plt.savefig(full_path, bbox_inches='tight')
+        plt.close(fig) # Fecha a figura para liberar memória
+
+    def find_dominant_point(self, nfp_poly):
+        """
+        Encontra o "Dominant Point" de um No-Fit Polygon côncavo.
+        O Dp é o vértice do NFP mais distante da borda do seu fecho convexo.
+
+        Args:
+            nfp_poly (Polygon): O polígono NFP a ser analisado.
+
+        Returns:
+            tuple: As coordenadas (x, y) do ponto dominante, ou None se não for encontrado.
+        """
+        if nfp_poly is None or nfp_poly.is_empty or not hasattr(nfp_poly, 'exterior'):
+            return None
+
+        # O conceito de "Dominant Point" só se aplica a polígonos côncavos.
+        ch = nfp_poly.convex_hull
+        # Usamos uma pequena tolerância para problemas de ponto flutuante
+        if nfp_poly.area >= ch.area - 1e-9:
+            return None # Polígono é convexo, não há Dp.
+
+        # As "vacancies" são as áreas de concavidade (diferença entre o fecho e o polígono)
+        vacancies = ch.difference(nfp_poly)
+        if vacancies.is_empty:
+            return None
+
+        # Garante que as vacancies sejam sempre uma lista de polígonos
+        if isinstance(vacancies, Polygon):
+            vacancies = [vacancies]
+        else:
+            vacancies = list(vacancies.geoms)
+
+        max_dist = -1
+        dominant_point = None
+
+        # Para cada área de concavidade (vacancy)...
+        for vacancy in vacancies:
+            # A "opponent side" é a borda que a concavidade compartilha com o fecho convexo
+            opponent_side = vacancy.boundary.intersection(ch.boundary)
             
-        self.LS_type = 'Best'
-        self.greedy = []
-        self.dict_best = {
-                    "fu": -92.41,
-                    "jackobs1": -89.10,
-                    "jackobs2": -87.73,
-                    "shapes0": -68.79,
-                    "shapes1": -76.73,
-                    "shapes2": -84.84,
-                    "dighe1": -100.00,
-                    "dighe2": -100.00,
-                    "albano": -89.58,
-                    "dagli": -89.51,
-                    "mao": -85.44,
-                    "marques": -90.59,
-                    "shirts": -88.96,
-                    "swim": -75.94,
-                    "trousers": -91.00
-                }
+            if opponent_side.is_empty or not isinstance(opponent_side, (LineString, Point)):
+                continue
+                
+            # Os pontos a serem testados são os vértices do NFP que formam essa concavidade
+            points_to_check_geom = nfp_poly.boundary.intersection(vacancy)
+            
+            all_coords = []
+            if hasattr(points_to_check_geom, 'geoms'):
+                for geom in points_to_check_geom.geoms:
+                    all_coords.extend(list(geom.coords))
+            elif hasattr(points_to_check_geom, 'coords'):
+                all_coords = list(points_to_check_geom.coords)
+            
+            # Encontra o ponto (vértice) com a maior distância até a borda do fecho convexo
+            for p_coords in all_coords:
+                p = Point(p_coords)
+                dist = p.distance(opponent_side)
+                if dist > max_dist:
+                    max_dist = dist
+                    dominant_point = p_coords
+
+        return dominant_point
+    def pairwise(self, porcentagem_cluster=0.2):
+        """
+        Processa todas as combinações de pares, utilizando cache para evitar cálculos
+        repetidos de formas. Calcula o ClusterValue para os pontos mais promissores
+        e, ao final, salva imagens das N melhores configurações encontradas.
+        """
+
+        if porcentagem_cluster == 0:
+            return
+        avaliacoes = []
+        pairwise_cache = {} # Dicionário para cache dos cálculos geométricos
+
+        pecas_a_analisar = range(len(self.lista_original))
+        rotacoes_a_analisar = self.graus
+
+        # Calculando o total de combinações de TIPOS de peça para o progresso
+        tipos_unicos = []
+        for peca in self.lista_original:
+            if peca not in tipos_unicos:
+                tipos_unicos.append(peca)
+        num_tipos = len(tipos_unicos)
+        num_pares_tipos = (num_tipos * (num_tipos - 1)) / 2 + num_tipos # Pares (A,B) + Pares (A,A)
+        total_steps = int(num_pares_tipos * (len(rotacoes_a_analisar)**2))
+        step = 0
+        print(f"Iniciando análise de pairwise... Total de combinações de TIPOS de peça/rotações: ~{total_steps}")
+
+        for i in pecas_a_analisar:
+            for j in range(i + 1, len(pecas_a_analisar)):
+                for grau1_idx in rotacoes_a_analisar:
+                    for grau2_idx in rotacoes_a_analisar:
+                        
+                        # --- Cria uma chave canônica para o cache baseada nas FORMAS ---
+                        shape1_coords = tuple(map(tuple, self.lista_original[i]))
+                        shape2_coords = tuple(map(tuple, self.lista_original[j]))
+                        key_shapes = tuple(sorted((shape1_coords, shape2_coords)))
+                        cache_key = (key_shapes[0], grau1_idx, key_shapes[1], grau2_idx)
+
+                        # --- Verifica o cache ---
+                        if cache_key in pairwise_cache:
+                            cached_result = pairwise_cache[cache_key]
+                            if cached_result:
+                                avaliacoes.append({**cached_result, 'i': i, 'j': j, 'grau1': grau1_idx, 'grau2': grau2_idx})
+                            continue # Pula para a próxima iteração, evitando recalcular
+
+                        # --- Se não está no cache, faz o cálculo completo ---
+                        step += 1
+                        print(f"Progresso (cálculo novo): {step}/{total_steps}", end='\r')
+                        
+                        self.reset()
+                        self.acao(i, 0, 0, grau1_idx)
+                        nfp_result, intersec_result = self.nfp(self.lista.index(self.lista_original[j]), grau2_idx)
+                        self.remover_ultima_acao()
+
+                        if not nfp_result or nfp_result.is_empty:
+                            pairwise_cache[cache_key] = None
+                            continue
+
+                        pontos_candidatos = []
+                        dominant_point = self.find_dominant_point(nfp_result)
+                        if dominant_point: pontos_candidatos.append(dominant_point)
+                        if intersec_result and not intersec_result.is_empty:
+                            pontos_candidatos.extend(extrair_vertices(intersec_result))
+                        
+                        if not pontos_candidatos:
+                            pairwise_cache[cache_key] = None
+                            continue
+                        
+                        pontos_candidatos = list(dict.fromkeys(pontos_candidatos))
+                        
+                        best_value_for_key = -1
+                        best_config_for_key = None
+
+                        for ponto_encaixe in pontos_candidatos:
+                            poly1 = Polygon(self.rot_pol(i, grau1_idx))
+                            poly2_coords = self.rot_pol(j, grau2_idx)
+                            poly2 = Polygon([(p[0] + ponto_encaixe[0], p[1] + ponto_encaixe[1]) for p in poly2_coords])
+                            
+                            ch_poly1 = poly1.convex_hull
+                            ch_poly2 = poly2.convex_hull
+                            ch_uniao = unary_union([poly1, poly2]).convex_hull
+                            
+                            # --- VERSÃO 1: Cr1 Granular (Correta segundo a Figura 7 do artigo) ---
+                            # chv1 = ch_poly1.difference(poly1)
+                            # chv2 = ch_poly2.difference(poly2)
+                            # score_p2_em_p1_list = []
+                            # if not chv1.is_empty:
+                            #     chv1_polys = list(chv1.geoms) if hasattr(chv1, 'geoms') else [chv1]
+                            #     for vacancy in chv1_polys:
+                            #         if vacancy.area > 1e-9:
+                            #             score_p2_em_p1_list.append(poly2.intersection(vacancy).area / vacancy.area)
+                            # score_p2_em_p1 = max(score_p2_em_p1_list) if score_p2_em_p1_list else 0
+                            # score_p1_em_p2_list = []
+                            # if not chv2.is_empty:
+                            #     chv2_polys = list(chv2.geoms) if hasattr(chv2, 'geoms') else [chv2]
+                            #     for vacancy in chv2_polys:
+                            #         if vacancy.area > 1e-9:
+                            #             score_p1_em_p2_list.append(poly1.intersection(vacancy).area / vacancy.area)
+                            # score_p1_em_p2 = max(score_p1_em_p2_list)  if score_p1_em_p2_list else 0
+                            # cr1 = max(score_p1_em_p2, score_p2_em_p1)
+
+                            # --- VERSÃO 2: Cr1 Alternativa (Sua proposta para testes) ---
+                            ratio1_alt = ch_poly1.intersection(poly2).area / ch_poly1.area if ch_poly1.area > 1e-9 else 0
+                            ratio2_alt = ch_poly2.intersection(poly1).area / ch_poly2.area if ch_poly2.area > 1e-9 else 0
+                            cr1 = max(ratio1_alt, ratio2_alt) # Descomente esta linha para usar a versão 2
+                            
+                            cr2 = (poly1.area + poly2.area) / ch_uniao.area if ch_uniao.area > 1e-9 else 0
+                            cluster_value = cr1 * cr2
+                            
+                            if cluster_value > best_value_for_key:
+                                best_value_for_key = cluster_value
+                                best_config_for_key = {
+                                    'value': cluster_value, 'ponto_encaixe': ponto_encaixe,
+                                    'cr1': cr1, 'cr2': cr2
+                                }
+                        
+                        pairwise_cache[cache_key] = best_config_for_key
+                        if best_config_for_key:
+                            avaliacoes.append({**best_config_for_key, 'i': i, 'j': j, 'grau1': grau1_idx, 'grau2': grau2_idx})
+
+        print("\nAnálise concluída. Selecionando e salvando imagens dos melhores resultados...")
+
+    # print("\nAnálise concluída. Selecionando pares únicos para plotagem...")
+
+        # --- Ordena e Salva as Imagens dos Melhores Resultados SEM REPETIR PEÇAS ---
+        if not avaliacoes:
+            print("Nenhuma configuração válida foi encontrada.")
+            return
+
+        avaliacoes.sort(key=lambda x: x['value'], reverse=True)
+
+        # MUDANÇA 2: Calculamos o número de pares desejado com base na porcentagem
+        num_total_pecas = len(self.lista_original)
+        num_pares_desejado = int((num_total_pecas * porcentagem_cluster) / 2)
+
+        pares_finais_para_plotar = []
+        pecas_ja_agrupadas = set()
+
+        for aval in avaliacoes:
+            # MUDANÇA 3: O critério de parada agora usa o número de pares calculado
+            if len(pares_finais_para_plotar) >= num_pares_desejado:
+                break
+
+            peca1_idx = aval['i']
+            peca2_idx = aval['j']
+
+            if peca1_idx not in pecas_ja_agrupadas and peca2_idx not in pecas_ja_agrupadas:
+                pares_finais_para_plotar.append(aval)
+                pecas_ja_agrupadas.add(peca1_idx)
+                pecas_ja_agrupadas.add(peca2_idx)
+
+        # MUDANÇA 4: O print final reflete a nova lógica
+        print(f"\n--- Salvando imagens para {len(pares_finais_para_plotar)}/{num_pares_desejado} pares encontrados ({porcentagem_cluster:.0%}) ---")
         
-    
-        self.dict_feasible = {}
-        self.lista_anterior = []
-        self.best_fit = 100000
+
+        # print(f"\n--- Salvando as imagens dos Top {len(pares_finais)} Melhores Encaixes ---")
+        save_path = f"C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python\\pairwise_results_20\\{self.dataset}"
+        for rank, aval in enumerate(pares_finais_para_plotar):
+            self.reset()
+            poly1 = Polygon(self.rot_pol(aval['i'], aval['grau1']))
+            ponto = aval['ponto_encaixe']
+            poly2_coords = self.rot_pol(aval['j'], aval['grau2'])
+            poly2 = Polygon([(p[0] + ponto[0], p[1] + ponto[1]) for p in poly2_coords])
+            
+            self.acao(aval['i'], 0, 0, aval['grau1'])
+            nfp_plot, _ = self.nfp(self.lista.index(self.lista_original[aval['j']]), aval['grau2'])
+            self.remover_ultima_acao()
+
+            titulo = (f"Rank #{rank + 1} | CV {aval['value']:.3f}\n"
+                    f"P ({aval['i']},{aval['j']}) G ({aval['grau1']},{aval['grau2']})\n"
+                    f"Cr1 {aval['cr1']:.3f}, Cr2 {aval['cr2']:.3f}")
+            
+            self.plot_pairwise_geometries(poly1, poly2, nfp_plot, titulo, filepath=save_path) 
+   
+        return pares_finais_para_plotar
 
 
+    def criar_lista_clusterizada(self, pares_selecionados):
+        """
+        Recebe os pares selecionados pela função 'pairwise' e retorna uma nova
+        lista de polígonos, com as peças dos pares substituídas por suas
+        respectivas "meta-peças".
 
+        Retorna:
+            list: A nova lista de coordenadas de polígonos.
+        """
+        if not pares_selecionados:
+            print("INFO: Nenhum par selecionado. Retornando a lista original.")
+            return self.lista_original
 
+        print(f"INFO: Criando nova lista de peças com {len(pares_selecionados)} clusters...")
 
+        pecas_agrupadas_indices = set()
+        nova_lista_de_pecas = []
 
-    
+        # --- Passo 1: Criar e adicionar as meta-peças à nova lista ---
+        for par in pares_selecionados:
+            i, j = par['i'], par['j']
+            g1, g2 = par['grau1'], par['grau2']
+            ponto_encaixe = par['ponto_encaixe']
+            
+            pecas_agrupadas_indices.add(i)
+            pecas_agrupadas_indices.add(j)
+
+            poly1 = Polygon(self.rot_pol(i, g1))
+            poly2_coords = self.rot_pol(j, g2)
+            poly2_translated = Polygon([(p[0] + ponto_encaixe[0], p[1] + ponto_encaixe[1]) for p in poly2_coords])
+            
+            # --- Escolha como a meta-peça será criada ---
+
+            # Opção A (Recomendado e Robusto): Usa unary_union e garante um polígono simples
+            uniao = unary_union([poly1, poly2_translated]).buffer(0)
+            if hasattr(uniao, 'geoms'):  # Se for um MultiPolygon
+                uniao = max(uniao.geoms, key=lambda p: p.area) # Pega apenas o maior componente
+            # Pega apenas o contorno externo, ignorando buracos, o que simplifica o polígono
+            meta_peca = [(round(x,2), round(y,2)) for x,y in uniao.exterior.coords]
+            # print(meta_peca)
+            meta_peca_poly = []
+            for cor in meta_peca:
+                if cor not in meta_peca_poly:
+                    meta_peca_poly.append(cor)
+
+            ring = LinearRing(meta_peca_poly)
+            if ring.is_ccw:
+                coords_ccw = list(ring.coords)
+            else:
+                # Se a ordem for horária (CW), simplesmente invertemos a lista
+                coords_ccw = list(ring.coords)[::-1]
+
+            # 4. Remove o último vértice se ele for uma repetição do primeiro
+            #    A biblioteca de decomposição geralmente espera uma lista sem o ponto final repetido.
+            if coords_ccw and coords_ccw[0] == coords_ccw[-1]:
+                coords_finais_para_lib = coords_ccw[:-1]
+            else:
+                coords_finais_para_lib = coords_ccw
+
+            meta_peca_poly = coords_finais_para_lib
+            # meta_peca_poly 
+            print(meta_peca_poly)
+
+            # # Opção B (Experimental): "Costurando" os vértices a partir do ponto de encaixe
+            # # AVISO: Risco de gerar polígonos inválidos (auto-interseção). Use com cautela.
+            # p1_coords = list(poly1.exterior.coords)
+            # p2_coords_translated = list(poly2_translated.exterior.coords)
+            # ponto_em_p1 = min(p1_coords, key=lambda p: Point(p).distance(Point(ponto_encaixe)))
+            # idx_insercao = p1_coords.index(ponto_em_p1)
+            # nova_lista_coords = p1_coords[:idx_insercao + 1] + p2_coords_translated[:-1] + p1_coords[idx_insercao + 1:]
+            # meta_peca_poly = Polygon(nova_lista_coords)
+            
+            nova_lista_de_pecas.append(meta_peca_poly)
+
+        # --- Passo 2: Adicionar as peças que não foram agrupadas ---
+        for i, peca_coords in enumerate(self.lista_original):
+            if i not in pecas_agrupadas_indices:
+                nova_lista_de_pecas.append(peca_coords)
+                
+        print(f"INFO: Nova lista de peças criada com {len(nova_lista_de_pecas)} itens.")
         
+        return nova_lista_de_pecas  
     def acao(self,peca,x,y,grau_idx):
         peca_posicionar = self.rot_pol(peca, grau_idx)
 
@@ -1860,19 +2277,21 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    # instancias = ["fu""jackobs1",,"marques","swim"]    
-    instancias = ["fu","jackobs1","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dighe1","dighe2","dagli","mao","marques","swim"] 
+    instancias = ["shapes2","swim","jackobs2"]    
+    # instancias = [ "shapes2","swim","fu","jackobs1","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dighe1","dighe2","dagli","mao","marques","swim"] 
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
     decoders = ['D1_A']
+    # for ins in instancias:
+    # env = SPP2D(dataset=instancias[0], tempo=10, decoder='D0')
     for fd in range(10):
         for tempo in [2400]:    
-            for restart in [0.5]:                
+            for restart in [1/6]:                
                 for ins in instancias:
                     for decoder in decoders:
                         list_time = []
                         list_cost = []
                         
-                        env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder)
+                        env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder, pairwise=True)
                         # i = 0
                         # start = time.time()
                         # while time.time() - start < 10:
@@ -1885,6 +2304,6 @@ if __name__ == '__main__':
                         # print(i)
 
                         print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                        solver = RKO(env, print_best=False, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
-                        cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=1)
+                        solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
+                        cost,sol, temp = solver.solve(tempo,brkga=1,ms=0,sa=3,vns=1,ils=0, lns=0, pso=1, ga=0, restart= restart,  runs=1)
 

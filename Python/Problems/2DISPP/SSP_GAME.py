@@ -387,7 +387,8 @@ class Visualizer:
                 scale = min((thumb_w-thumb_pad)/max(1, max_x), (thumb_h-thumb_pad)/max(1, max_y))
                 thumb_coords = [(screen_rect.left+thumb_pad/2+p[0]*scale, screen_rect.top+thumb_pad/2+p[1]*scale) for p in norm_peca]
                 piece_info['rect'] = screen_rect; pygame.draw.rect(self.screen, (225, 225, 225), screen_rect, border_radius=3)
-                pygame.draw.polygon(self.screen, self.PIECE_COLORS[i % len(self.PIECE_COLORS)], thumb_coords)
+                pygame.draw.polygon(self.screen, self.
+                                    PIECE_COLORS[i % len(self.PIECE_COLORS)], thumb_coords)
                 count_surf = self.font_count.render(f"x{piece_info['count']}", True, (0, 0, 0)); self.screen.blit(count_surf, (screen_rect.right - 30, screen_rect.top + 5))
                 is_selected = piece_info['first_idx'] == self.spp_selected_piece_idx or piece_info['first_idx'] == self.nfp_selected_piece_idx
                 pygame.draw.polygon(self.screen, (255, 0, 0) if is_selected else (50, 50, 50), thumb_coords, 3 if is_selected else 1)
@@ -442,7 +443,7 @@ class Visualizer:
 if __name__ == '__main__':
     
 
-    meu_ambiente_spp = SPP2D(dataset='fu' )
+    meu_ambiente_spp = SPP2D(dataset='dighe2', pairwise=True)
 
 
 

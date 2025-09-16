@@ -483,7 +483,7 @@ class RKO():
         """
         metaheuristic_name = f"SA {tag}"
         tempo_max = self.max_time
-
+        
         # 1. SETUP DE PARÂMETROS
         # ----------------------------------------------------------------
         q_manager, params = self._setup_parameters(metaheuristic_name, self.env.SA_parameters)
@@ -497,7 +497,7 @@ class RKO():
         alpha = params['alphaSA']
         beta_min = params['betaMin']
         beta_max = params['betaMax']
-
+        TemperaturaMaxAtual = Temperatura
         # 2. INICIALIZAÇÃO DA SOLUÇÃO
         # ----------------------------------------------------------------
         start_time = time.time()
@@ -580,6 +580,10 @@ class RKO():
                         return [], best_keys, best_cost
 
                 T *= alpha
+
+                if T < 0.0001:
+                    TemperaturaMaxAtual = 0.8 * TemperaturaMaxAtual
+                    T = TemperaturaMaxAtual
                 
             # --- ATUALIZAÇÃO E FEEDBACK PARA O Q-LEARNING ---
             if q_manager:

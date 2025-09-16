@@ -283,6 +283,7 @@ def can_merge_polygons(poly1, poly2):
 from shapely.geometry import Polygon
 import triangle as tr
 import numpy as np
+import matplotlib.pyplot as plt
 
 def triangulate_shapely(points):
     """
@@ -299,6 +300,7 @@ def triangulate_shapely(points):
 
     # Executa a decomposição convexa
     convex_parts = polygonQuickDecomp(points_list)
+    # if len(convex_ppoly
 
     # Converte cada parte de volta em tuplas para consistência
     result = []
