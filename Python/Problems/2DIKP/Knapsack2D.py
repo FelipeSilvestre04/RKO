@@ -596,14 +596,14 @@ class Knapsack2D():
             
         if tabela is not None:
             self.tabela_nfps = tabela
-        elif os.path.exists(f"nfp_{self.dataset}.txt"):
-            with open(f"nfp_{self.dataset}.txt", "r") as f:
+        elif os.path.exists(f"nfp_{self.dataset}_kp.txt"):
+            with open(f"nfp_{self.dataset}_kp.txt", "r") as f:
                 conteudo = f.read()
             self.tabela_nfps = ast.literal_eval(conteudo)
             
         else:
             self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
-            with open(f"nfp_{self.dataset}.txt", "w") as f:
+            with open(f"nfp_{self.dataset}_kp.txt", "w") as f:
                 f.write(repr(self.tabela_nfps))
             
             

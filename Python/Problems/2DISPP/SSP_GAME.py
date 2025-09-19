@@ -1,39 +1,12 @@
-from SPP2D import SPP2D
-
-import pygame
-import sys
-import random
-from SPP2D import extrair_vertices
-
-# --- Classe do Visualizador ---
-
-
-import pygame
-import sys
-import copy
-
-import pygame
-import sys
-import copy
-
-import pygame
-import sys
-import copy
-from collections import OrderedDict
-
-import math
-
 import pygame
 import sys
 import copy
 from collections import OrderedDict
 import math
+from shapely.geometry import Point, Polygon, LineString, MultiPoint, MultiLineString
 
-import pygame
-import sys
-import copy
-from collections import OrderedDict
-import math
+# Supondo que SPP2D.py está na mesma pasta
+from SPP2D import SPP2D, extrair_vertices
 
 # --- Classe auxiliar para Botões ---
 class Button:
@@ -75,6 +48,7 @@ class Visualizer:
         self.spp_selected_piece_idx = None; self.spp_selected_rotation = 0; self.spp_unique_pieces_view = []
         self.spp_feasible_vertices = []; self.spp_current_vertex_idx = 0; self.spp_sidebar_scroll_y = 0
         self.spp_sidebar_content_height = 0; self.spp_buttons = {}
+        self.spp_hovered_rule_name = None # NOVO: Para preview dinâmico
 
         # Estado do Modo NFP
         self.nfp_placed_pieces = []; self.nfp_selected_piece_idx = None; self.nfp_selected_rotation = 0
@@ -89,7 +63,11 @@ class Visualizer:
             mouse_pos = pygame.mouse.get_pos()
             events = pygame.event.get()
             for event in events:
-                if event.type == pygame.QUIT: running = False
+                if event.type == pygame.QUIT:
+                    running = False
+            
+            # Reseta o botão sobrevoado a cada frame
+            self.spp_hovered_rule_name = None
 
             if self.mode == 'MENU':
                 self._handle_menu_events(events, mouse_pos)
@@ -103,7 +81,8 @@ class Visualizer:
             
             pygame.display.flip()
             self.clock.tick(60)
-        pygame.quit(); sys.exit()
+        pygame.quit()
+        sys.exit()
 
     def _draw_menu(self):
         self.screen.fill(self.BG_COLOR)
@@ -122,70 +101,48 @@ class Visualizer:
                 if self.menu_buttons['SPP_SOLVER'].is_clicked(mouse_pos): self._reset_spp_mode(); self.mode = 'SPP_SOLVER'
                 if self.menu_buttons['NFP_EXPLORER'].is_clicked(mouse_pos): self._reset_nfp_mode(); self.mode = 'NFP_EXPLORER'
 
-    # --- Métodos do Modo NFP ---
+    # --- Métodos do Modo NFP --- (Sem alterações, incluído para ser completo)
     def _reset_nfp_mode(self):
         self.nfp_placed_pieces = []; self.nfp_selected_piece_idx = None; self.nfp_selected_rotation = 0
         self.nfp_vertices = []; self.nfp_current_vertex_idx = 0; self.spp_env.reset()
 
     def _handle_nfp_events(self, events, mouse_pos):
-        # Lida com scroll da sidebar (reutilizado)
         if mouse_pos[0] < self.sidebar_width:
             for event in events:
                 if event.type == pygame.MOUSEWHEEL:
                     self.nfp_sidebar_scroll_y -= event.y * 20
                     max_scroll = self.spp_sidebar_content_height - self.height
                     self.nfp_sidebar_scroll_y = max(0, min(self.nfp_sidebar_scroll_y, max_scroll if max_scroll > 0 else 0))
-        
-        # Lida com cliques
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.back_to_menu_button.is_clicked(mouse_pos):
-                    self.mode = 'MENU'
-                    return # Sai para evitar outros cliques
-                # Clica na sidebar para selecionar peça
+                if self.back_to_menu_button.is_clicked(mouse_pos): self.mode = 'MENU'; return
                 for piece_info in self.spp_unique_pieces_view:
                     if piece_info.get('rect') and piece_info['rect'].collidepoint(mouse_pos):
-                        self.nfp_selected_piece_idx = piece_info['first_idx']
-                        self.nfp_selected_rotation = 0
-                        if self.nfp_placed_pieces:
-                           self._update_nfp()
+                        self.nfp_selected_piece_idx = piece_info['first_idx']; self.nfp_selected_rotation = 0
+                        if self.nfp_placed_pieces: self._update_nfp()
                         return
-
-                # Clica nos botões do painel
                 if self.nfp_buttons['RESET'].is_clicked(mouse_pos): self._reset_nfp_mode()
                 if self.nfp_selected_piece_idx is not None:
-                    # --- CORREÇÃO APLICADA AQUI ---
-                    # A rotação agora funciona a qualquer momento e recalcula o NFP se necessário.
                     if 'ROT' in self.nfp_buttons and self.nfp_buttons['ROT'].is_clicked(mouse_pos):
                         self.nfp_selected_rotation = (self.nfp_selected_rotation + 1) % 4
-                        # Se já houver peças fixas, o NFP precisa ser recalculado para a nova rotação.
-                        if self.nfp_placed_pieces:
-                            self._update_nfp()
-                    
+                        if self.nfp_placed_pieces: self._update_nfp()
                     if not self.nfp_placed_pieces and 'PLACE_INIT' in self.nfp_buttons and self.nfp_buttons['PLACE_INIT'].is_clicked(mouse_pos):
-                        peca_original = self.spp_env.lista[self.nfp_selected_piece_idx]
-                        original_index_in_list = self.spp_env.lista_original.index(peca_original)
+                        peca_original = self.spp_env.lista[self.nfp_selected_piece_idx]; original_index_in_list = self.spp_env.lista_original.index(peca_original)
                         self.nfp_placed_pieces.append({'x':0, 'y':0, 'grau_idx': self.nfp_selected_rotation, 'pol_idx': original_index_in_list})
-                        self.spp_env.lista.pop(self.nfp_selected_piece_idx)
-                        self.nfp_selected_piece_idx = None
-                    
+                        self.spp_env.lista.pop(self.nfp_selected_piece_idx); self.nfp_selected_piece_idx = None
                     if self.nfp_placed_pieces and self.nfp_vertices:
                         num_v = len(self.nfp_vertices)
                         if self.nfp_buttons['NEXT_V'].is_clicked(mouse_pos): self.nfp_current_vertex_idx = (self.nfp_current_vertex_idx + 1) % num_v
                         if self.nfp_buttons['PREV_V'].is_clicked(mouse_pos): self.nfp_current_vertex_idx = (self.nfp_current_vertex_idx - 1 + num_v) % num_v
                         if self.nfp_buttons['PLACE_V'].is_clicked(mouse_pos):
-                            pos = self.nfp_vertices[self.nfp_current_vertex_idx]
-                            peca_original = self.spp_env.lista[self.nfp_selected_piece_idx]
+                            pos = self.nfp_vertices[self.nfp_current_vertex_idx]; peca_original = self.spp_env.lista[self.nfp_selected_piece_idx]
                             original_index_in_list = self.spp_env.lista_original.index(peca_original)
                             self.nfp_placed_pieces.append({'x':pos[0], 'y':pos[1], 'grau_idx': self.nfp_selected_rotation, 'pol_idx': original_index_in_list})
-                            self.spp_env.lista.pop(self.nfp_selected_piece_idx)
-                            self.nfp_selected_piece_idx, self.nfp_vertices = None, []
+                            self.spp_env.lista.pop(self.nfp_selected_piece_idx); self.nfp_selected_piece_idx, self.nfp_vertices = None, []
 
-    
     def _draw_nfp_panel(self):
         panel_rect = pygame.Rect(self.sidebar_width, self.height - self.panel_height, self.width - self.sidebar_width, self.panel_height); pygame.draw.rect(self.screen, (220, 220, 220), panel_rect)
-        p_y, base_x = self.height - self.panel_height + 20, self.sidebar_width
-        self.nfp_buttons = {'RESET': Button((self.width - 110, p_y + 65, 90, 40), "Reset", bg_color=(220, 50, 50))}
+        p_y, base_x = self.height - self.panel_height + 20, self.sidebar_width; self.nfp_buttons = {'RESET': Button((self.width - 110, p_y + 65, 90, 40), "Reset", bg_color=(220, 50, 50))}
         if self.nfp_selected_piece_idx is not None:
             self.nfp_buttons['ROT'] = Button((self.width - 210, p_y + 15, 190, 40), "Rotacionar")
             if not self.nfp_placed_pieces: self.nfp_buttons['PLACE_INIT'] = Button((base_x + 20, p_y + 40, 250, 60), "Posicionar Peça Inicial", font_size=20)
@@ -196,54 +153,27 @@ class Visualizer:
         for button in self.nfp_buttons.values(): button.draw(self.screen)
         
     def _update_nfp(self):
-        if self.nfp_selected_piece_idx is None or not self.nfp_placed_pieces:
-            self.nfp_vertices, self.nfp_draw_polygons, self.nfp_intersection_geoms = [], [], []
-            return
-            
+        if self.nfp_selected_piece_idx is None or not self.nfp_placed_pieces: self.nfp_vertices, self.nfp_draw_polygons, self.nfp_intersection_geoms = [], [], []; return
         original_indices, original_pecas_posicionadas = self.spp_env.indices_pecas_posicionadas, self.spp_env.pecas_posicionadas
         try:
             self.spp_env.indices_pecas_posicionadas = [[p['x'], p['y'], p['grau_idx'], p['pol_idx']] for p in self.nfp_placed_pieces]
-            
-            # Seu método agora retorna o NFP e a geometria da interseção
             nfp_polygon, nfp_intersec = self.spp_env.nfp(self.nfp_selected_piece_idx, self.nfp_selected_rotation)
-            
-            # Processa o polígono NFP principal (exterior e buracos)
             self.nfp_draw_polygons, all_vertices = [], []
             if hasattr(nfp_polygon, 'exterior'):
-                exterior_verts = list(nfp_polygon.exterior.coords)
-                self.nfp_draw_polygons.append(exterior_verts)
-                all_vertices.extend(exterior_verts)
-                for interior in nfp_polygon.interiors:
-                    hole_verts = list(interior.coords)
-                    self.nfp_draw_polygons.append(hole_verts)
-                    all_vertices.extend(hole_verts)
-            
-            # --- AJUSTE AQUI: Processa e armazena a geometria da interseção ---
+                exterior_verts = list(nfp_polygon.exterior.coords); self.nfp_draw_polygons.append(exterior_verts); all_vertices.extend(exterior_verts)
+                for interior in nfp_polygon.interiors: hole_verts = list(interior.coords); self.nfp_draw_polygons.append(hole_verts); all_vertices.extend(hole_verts)
             self.nfp_intersection_geoms = []
             if nfp_intersec and not nfp_intersec.is_empty:
-                # Adiciona os vértices da interseção à lista de pontos navegáveis
                 all_vertices.extend(extrair_vertices(nfp_intersec))
-
-                # Armazena a geometria para ser desenhada
-                if hasattr(nfp_intersec, 'geoms'): # Lida com MultiPoint, MultiPolygon, etc.
-                    self.nfp_intersection_geoms.extend(list(nfp_intersec.geoms))
-                else: # Lida com geometrias únicas como Point ou Polygon
-                    self.nfp_intersection_geoms.append(nfp_intersec)
-
-            # Remove duplicados da lista de vértices navegáveis
+                if hasattr(nfp_intersec, 'geoms'): self.nfp_intersection_geoms.extend(list(nfp_intersec.geoms))
+                else: self.nfp_intersection_geoms.append(nfp_intersec)
             self.nfp_vertices = list(OrderedDict.fromkeys(all_vertices))
-
         finally:
             self.spp_env.indices_pecas_posicionadas, self.spp_env.pecas_posicionadas = original_indices, original_pecas_posicionadas
-            
         self.nfp_current_vertex_idx = 0
 
     def _draw_nfp_mode(self):
-        self.screen.fill((220, 220, 230))
-        self._draw_sidebar(scroll_y_attr='nfp_sidebar_scroll_y')
-        
-        # Desenha as peças já posicionadas
-        # (código omitido por brevidade, permanece o mesmo da versão anterior)
+        self.screen.fill((220, 220, 230)); self._draw_sidebar(scroll_y_attr='nfp_sidebar_scroll_y')
         all_placed_coords = []
         for i, piece_info in enumerate(self.nfp_placed_pieces):
             peca_original = self.spp_env.lista_original[piece_info['pol_idx']]; original_lista = self.spp_env.lista; self.spp_env.lista = [peca_original]
@@ -256,41 +186,23 @@ class Visualizer:
             min_y, max_y = min(p[1] for p in all_placed_coords), max(p[1] for p in all_placed_coords)
             self.nfp_view_center = ((min_x + max_x) / 2, (min_y + max_y) / 2)
         else: self.nfp_view_center = (0, 0)
-            
-        # Desenha o NFP, a pré-visualização e a INTERSEÇÃO
         if self.nfp_selected_piece_idx is not None and self.nfp_vertices:
-            # 1. Desenha o NFP (borda externa e buracos)
             for i, polygon_verts in enumerate(self.nfp_draw_polygons):
-                nfp_screen_coords = self._transform_nfp_coords(polygon_verts)
-                color = (255, 0, 255) if i == 0 else (255, 165, 0) # Externa em Magenta, Buracos em Laranja
+                nfp_screen_coords = self._transform_nfp_coords(polygon_verts); color = (255, 0, 255) if i == 0 else (255, 165, 0)
                 pygame.draw.polygon(self.screen, color, nfp_screen_coords, 2)
-            
-            # --- AJUSTE AQUI: Desenha a geometria da interseção ---
-            # 2. Desenha a geometria da interseção em Ciano para destaque
             for geom in self.nfp_intersection_geoms:
                 if geom.geom_type in ['Polygon', 'LinearRing']:
-                    intersec_coords = self._transform_nfp_coords(list(geom.exterior.coords))
-                    pygame.draw.polygon(self.screen, (0, 255, 255), intersec_coords, 3) # Contorno Ciano
+                    intersec_coords = self._transform_nfp_coords(list(geom.exterior.coords)); pygame.draw.polygon(self.screen, (0, 255, 255), intersec_coords, 3)
                 elif geom.geom_type == 'Point':
-                    intersec_coords = self._transform_nfp_coords([(geom.x, geom.y)])[0]
-                    pygame.draw.circle(self.screen, (0, 255, 255), intersec_coords, 6, 3) # Círculo Ciano
-
-            # 3. Desenha a pré-visualização da peça móvel no vértice selecionado
-            pos = self.nfp_vertices[self.nfp_current_vertex_idx]
-            peca_rot = self.spp_env.rot_pol(self.nfp_selected_piece_idx, self.nfp_selected_rotation)
-            preview_coords = self._transform_nfp_coords(peca_rot, offset=pos)
-            preview_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            pygame.draw.polygon(preview_surface, (170,102,204,180), preview_coords)
-            self.screen.blit(preview_surface, (0,0))
+                    intersec_coords = self._transform_nfp_coords([(geom.x, geom.y)])[0]; pygame.draw.circle(self.screen, (0, 255, 255), intersec_coords, 6, 3)
+            pos = self.nfp_vertices[self.nfp_current_vertex_idx]; peca_rot = self.spp_env.rot_pol(self.nfp_selected_piece_idx, self.nfp_selected_rotation)
+            preview_coords = self._transform_nfp_coords(peca_rot, offset=pos); preview_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            pygame.draw.polygon(preview_surface, (170,102,204,180), preview_coords); self.screen.blit(preview_surface, (0,0))
             pygame.draw.circle(self.screen, (200,0,0), self._transform_nfp_coords([pos])[0], 5)
-
-        self._draw_nfp_panel()
-        self.back_to_menu_button.draw(self.screen)
+        self._draw_nfp_panel(); self.back_to_menu_button.draw(self.screen)
 
     def _transform_nfp_coords(self, poly_pts, offset=(0, 0)):
-        view_center_x = self.sidebar_width + (self.width - self.sidebar_width) / 2
-        view_center_y = (self.height - self.panel_height) / 2
-        scale = 5
+        view_center_x = self.sidebar_width + (self.width - self.sidebar_width) / 2; view_center_y = (self.height - self.panel_height) / 2; scale = 5
         return [(int(view_center_x + (x - self.nfp_view_center[0] + offset[0]) * scale), int(view_center_y - (y - self.nfp_view_center[1] + offset[1]) * scale)) for x, y in poly_pts]
 
     # --- Métodos para o Modo SPP_SOLVER ---
@@ -329,6 +241,7 @@ class Visualizer:
         if buttons['RESET'].is_clicked(mouse_pos): self._reset_spp_mode()
         if buttons['UNDO'].is_clicked(mouse_pos): self.spp_env.remover_ultima_acao(); self._update_feasible_region()
         if buttons['ROT'].is_clicked(mouse_pos) and self.spp_selected_piece_idx is not None: self.spp_selected_rotation = (self.spp_selected_rotation + 1) % 4; self._update_feasible_region()
+        
         num_vertices = len(self.spp_feasible_vertices)
         if num_vertices > 0:
             if buttons['NEXT_V'].is_clicked(mouse_pos): self.spp_current_vertex_idx = (self.spp_current_vertex_idx + 1) % num_vertices
@@ -338,12 +251,23 @@ class Visualizer:
                 self.spp_env.acao(self.spp_selected_piece_idx, pos[0], pos[1], self.spp_selected_rotation)
                 self.spp_selected_piece_idx, self.spp_feasible_vertices = None, []
                 return
-        for name in ['BL', 'LB', 'UL', 'LU']:
-            if buttons[name].is_clicked(mouse_pos) and self.spp_selected_piece_idx is not None:
-                pos = getattr(self.spp_env, name)(self.spp_selected_piece_idx, self.spp_selected_rotation)
-                if pos: self.spp_env.acao(self.spp_selected_piece_idx, pos[0], pos[1], self.spp_selected_rotation); self.spp_selected_piece_idx, self.spp_feasible_vertices = None, []; return
+                
+        # --- LÓGICA DE CLIQUE DINÂMICA PARA TODAS AS HEURÍSTICAS ---
+        for rule_func in self.spp_env.regras.values():
+            rule_name = rule_func.__name__
+            if rule_name in buttons and buttons[rule_name].is_clicked(mouse_pos) and self.spp_selected_piece_idx is not None:
+                pos = rule_func(self.spp_selected_piece_idx, self.spp_selected_rotation)
+                if pos:
+                    self.spp_env.acao(self.spp_selected_piece_idx, pos[0], pos[1], self.spp_selected_rotation)
+                    self.spp_selected_piece_idx, self.spp_feasible_vertices = None, []
+                    return
+                    
         for piece_info in self.spp_unique_pieces_view:
-            if piece_info.get('rect') and piece_info['rect'].collidepoint(mouse_pos): self.spp_selected_piece_idx = piece_info['first_idx']; self.spp_selected_rotation = 0; self._update_feasible_region(); return
+            if piece_info.get('rect') and piece_info['rect'].collidepoint(mouse_pos):
+                self.spp_selected_piece_idx = piece_info['first_idx']
+                self.spp_selected_rotation = 0
+                self._update_feasible_region()
+                return
 
     def _calculate_spp_scale(self):
         env_w, env_h = self.spp_env.base, self.spp_env.altura; scale_x = (self.width - self.sidebar_width - 2 * self.padding) / env_w
@@ -370,15 +294,13 @@ class Visualizer:
 
     def _draw_sidebar(self, scroll_y_attr):
         self._prepare_unique_pieces_view(); sidebar_area = pygame.Rect(0, 0, self.sidebar_width, self.height)
-        pygame.draw.rect(self.screen, self.SIDEBAR_COLOR, sidebar_area)
-        title_surf = self.font.render("Peças Disponíveis", True, (0, 0, 0)); self.screen.blit(title_surf, (10, 10))
+        pygame.draw.rect(self.screen, self.SIDEBAR_COLOR, sidebar_area); title_surf = self.font.render("Peças Disponíveis", True, (0, 0, 0)); self.screen.blit(title_surf, (10, 10))
         thumb_w, thumb_h, thumb_pad = 120, 90, 10; start_x, start_y = thumb_pad, 50; current_x, current_y = start_x, start_y
         content_rects = []
         for _ in self.spp_unique_pieces_view:
             if current_y + thumb_h > self.height and current_x == start_x: current_y, current_x = start_y, current_x + thumb_w + thumb_pad
             content_rects.append(pygame.Rect(current_x, current_y, thumb_w, thumb_h)); current_y += thumb_h + thumb_pad
-        self.spp_sidebar_content_height = current_y
-        scroll_y = getattr(self, scroll_y_attr)
+        self.spp_sidebar_content_height = current_y; scroll_y = getattr(self, scroll_y_attr)
         for i, piece_info in enumerate(self.spp_unique_pieces_view):
             content_rect = content_rects[i]; screen_rect = content_rect.move(0, -scroll_y)
             if sidebar_area.colliderect(screen_rect):
@@ -387,8 +309,7 @@ class Visualizer:
                 scale = min((thumb_w-thumb_pad)/max(1, max_x), (thumb_h-thumb_pad)/max(1, max_y))
                 thumb_coords = [(screen_rect.left+thumb_pad/2+p[0]*scale, screen_rect.top+thumb_pad/2+p[1]*scale) for p in norm_peca]
                 piece_info['rect'] = screen_rect; pygame.draw.rect(self.screen, (225, 225, 225), screen_rect, border_radius=3)
-                pygame.draw.polygon(self.screen, self.
-                                    PIECE_COLORS[i % len(self.PIECE_COLORS)], thumb_coords)
+                pygame.draw.polygon(self.screen, self.PIECE_COLORS[i % len(self.PIECE_COLORS)], thumb_coords)
                 count_surf = self.font_count.render(f"x{piece_info['count']}", True, (0, 0, 0)); self.screen.blit(count_surf, (screen_rect.right - 30, screen_rect.top + 5))
                 is_selected = piece_info['first_idx'] == self.spp_selected_piece_idx or piece_info['first_idx'] == self.nfp_selected_piece_idx
                 pygame.draw.polygon(self.screen, (255, 0, 0) if is_selected else (50, 50, 50), thumb_coords, 3 if is_selected else 1)
@@ -400,38 +321,69 @@ class Visualizer:
         pygame.draw.line(self.screen, (150, 150, 150), (self.sidebar_width, 0), (self.sidebar_width, self.height), 2)
 
     def _draw_panel_and_buttons(self):
-        # --- CORREÇÃO APLICADA AQUI: Recria o dicionário de botões a cada chamada ---
-        p_y, base_x = self.height - self.panel_height + 20, self.sidebar_width
-        GRAY_BLUE, GRAY_GREEN, GRAY_RED, GRAY_ORANGE = (140, 160, 180), (140, 180, 160), (180, 140, 140), (180, 160, 140)
-        self.spp_buttons = {
-            'BL': Button((base_x + 20, p_y + 20, 80, 40), "BL", bg_color=GRAY_BLUE), 'LB': Button((base_x + 110, p_y + 20, 80, 40), "LB", bg_color=GRAY_GREEN),
-            'UL': Button((base_x + 20, p_y + 70, 80, 40), "UL", bg_color=GRAY_RED), 'LU': Button((base_x + 110, p_y + 70, 80, 40), "LU", bg_color=GRAY_ORANGE),
-            'PLACE_V': Button((base_x + 275, p_y - 5, 180, 40), "Posicionar Vértice", bg_color=(170, 102, 204)),
-            'PREV_V': Button((base_x + 295, p_y + 70, 50, 40), "<"), 'NEXT_V': Button((base_x + 355, p_y + 70, 50, 40), ">"),
-            'ROT': Button((self.width - 210, p_y + 15, 190, 40), "Rotacionar"),
-            'UNDO': Button((self.width - 210, p_y + 65, 90, 40), "Undo", bg_color=(240, 170, 0)),
-            'RESET': Button((self.width - 110, p_y + 65, 90, 40), "Reset", bg_color=(220, 50, 50)),
-        }
-        
         panel_rect = pygame.Rect(self.sidebar_width, self.height - self.panel_height, self.width - self.sidebar_width, self.panel_height)
         pygame.draw.rect(self.screen, (220, 220, 220), panel_rect)
         pygame.draw.line(self.screen, (150, 150, 150), (self.sidebar_width, self.height - self.panel_height), (self.width, self.height - self.panel_height), 2)
-        p_y_base = self.height - self.panel_height + 20
-        self.screen.blit(self.font.render("Regras Heurísticas", True, (0, 0, 0)), (self.spp_buttons['BL'].rect.left, p_y_base - 15))
-        self.screen.blit(self.font.render("Controle de Vértices", True, (0, 0, 0)), (self.spp_buttons['PLACE_V'].rect.left, self.spp_buttons['PLACE_V'].rect.bottom + 5))
-        for button in self.spp_buttons.values(): button.draw(self.screen)
+        
+        self.spp_buttons = {}
+        mouse_pos = pygame.mouse.get_pos()
+
+        base_x, p_y = self.sidebar_width + 15, self.height - self.panel_height + 5
+        btn_w, btn_h, btn_pad_x, btn_pad_y = 90, 35, 10, 5
+        
+        # self.screen.blit(self.font.render("Direcional (Esq/Dir)", True, (0,0,0)), (base_x, p_y))
+        col_x = base_x
+        self.spp_buttons['BL'] = Button((col_x, p_y + 25, btn_w, btn_h), "BL"); self.spp_buttons['LB'] = Button((col_x, p_y + 25 + btn_h + btn_pad_y, btn_w, btn_h), "LB")
+        self.spp_buttons['BR'] = Button((col_x + btn_w + btn_pad_x, p_y + 25, btn_w, btn_h), "BR"); self.spp_buttons['RB'] = Button((col_x + btn_w + btn_pad_x, p_y + 25 + btn_h + btn_pad_y, btn_w, btn_h), "RB")
+        
+        col_x = base_x + 2 * (btn_w + btn_pad_x)
+        # self.screen.blit(self.font.render("Direcional (Cima/Baixo)", True, (0,0,0)), (col_x, p_y))
+        self.spp_buttons['UL'] = Button((col_x, p_y + 25, btn_w, btn_h), "UL"); self.spp_buttons['LU'] = Button((col_x, p_y + 25 + btn_h + btn_pad_y, btn_w, btn_h), "LU")
+        self.spp_buttons['UR'] = Button((col_x + btn_w + btn_pad_x, p_y + 25, btn_w, btn_h), "UR"); self.spp_buttons['RU'] = Button((col_x + btn_w + btn_pad_x, p_y + 25 + btn_h + btn_pad_y, btn_w, btn_h), "RU")
+
+        col_x = base_x + 4 * (btn_w + btn_pad_x)
+        # self.screen.blit(self.font.render("Encaixe Forçado", True, (0,0,0)), (col_x, p_y))
+        self.spp_buttons['BL_NFP'] = Button((col_x, p_y + 25, btn_w, btn_h), "BL_NFP"); self.spp_buttons['LB_NFP'] = Button((col_x, p_y + 25 + btn_h + btn_pad_y, btn_w, btn_h), "LB_NFP")
+
+        col_x = base_x + 5 * (btn_w + btn_pad_x) + 10
+        # self.screen.blit(self.font.render("Centralidade", True, (0,0,0)), (col_x, p_y))
+        self.spp_buttons['NC'] = Button((col_x, p_y + 25, btn_w+20, 25), "Bin Center", font_size=14); self.spp_buttons['NCG'] = Button((col_x, p_y + 25 + 25 + 5, btn_w+20, 25), "Layout Center", font_size=14)
+        self.spp_buttons['NCNFP'] = Button((col_x, p_y + 25 + 2*(25 + 5), btn_w+20, 25), "Feasible Center", font_size=14)
+
+        ctrl_x = self.width - 240
+        # self.screen.blit(self.font.render("Controle de Vértices", True, (0,0,0)), (ctrl_x, p_y))
+        self.spp_buttons['PLACE_V'] = Button((ctrl_x - 300, p_y + 25, 180, 40), "Posicionar Vértice", bg_color=(170, 102, 204))
+        self.spp_buttons['PREV_V'] = Button((ctrl_x - 300, p_y + 70, 50, 40), "<"); self.spp_buttons['NEXT_V'] = Button((ctrl_x -200, p_y + 70, 50, 40), ">")
+
+        self.spp_buttons['ROT'] = Button((self.width - 210, p_y, 190, 40), "Rotacionar")
+        self.spp_buttons['UNDO'] = Button((self.width - 210, p_y + 50, 90, 40), "Undo", bg_color=(240, 170, 0))
+        self.spp_buttons['RESET'] = Button((self.width - 110, p_y + 50, 90, 40), "Reset", bg_color=(220, 50, 50))
+        
+        for name, button in self.spp_buttons.items():
+            button.draw(self.screen)
+            if self.spp_env.regras and name in [r.__name__ for r in self.spp_env.regras.values()] and button.is_clicked(mouse_pos):
+                self.spp_hovered_rule_name = name
+
         num_v = len(self.spp_feasible_vertices); v_text = f"{self.spp_current_vertex_idx + 1}/{num_v}" if num_v > 0 else "N/A"
-        v_surf = self.font.render(v_text, True, (0, 0, 0)); text_rect = v_surf.get_rect(center=(self.spp_buttons['NEXT_V'].rect.right + 50, self.spp_buttons['NEXT_V'].rect.centery))
+        v_surf = self.font.render(v_text, True, (0, 0, 0)); text_rect = v_surf.get_rect(center=(self.spp_buttons['NEXT_V'].rect.right + 40, self.spp_buttons['NEXT_V'].rect.centery))
         self.screen.blit(v_surf, text_rect)
 
     def _draw_heuristic_previews(self):
-        if self.spp_selected_piece_idx is None: return
-        for name in ['BL', 'LB', 'UL', 'LU']:
-            pos = getattr(self.spp_env, name)(self.spp_selected_piece_idx, self.spp_selected_rotation)
-            if pos:
-                peca_rot = self.spp_env.rot_pol(self.spp_selected_piece_idx, self.spp_selected_rotation); preview_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-                peca_screen_coords = self._transform_spp_coords(peca_rot, offset=pos); preview_color = list(self.spp_buttons[name].bg_color) + [128]
-                pygame.draw.polygon(preview_surface, preview_color, peca_screen_coords); self.screen.blit(preview_surface, (0, 0))
+        if self.spp_selected_piece_idx is None or self.spp_hovered_rule_name is None: return
+
+        rule_method = getattr(self.spp_env, self.spp_hovered_rule_name, None)
+        if not rule_method: return
+            
+        pos = rule_method(self.spp_selected_piece_idx, self.spp_selected_rotation)
+        if pos:
+            peca_rot = self.spp_env.rot_pol(self.spp_selected_piece_idx, self.spp_selected_rotation)
+            preview_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            peca_screen_coords = self._transform_spp_coords(peca_rot, offset=pos)
+            
+            button_color = self.spp_buttons.get(self.spp_hovered_rule_name).bg_color if self.spp_hovered_rule_name in self.spp_buttons else (150,150,150)
+            preview_color = list(button_color) + [128]
+            pygame.draw.polygon(preview_surface, preview_color, peca_screen_coords)
+            self.screen.blit(preview_surface, (0, 0))
 
     def _draw_vertex_preview(self):
         if self.spp_selected_piece_idx is not None and self.spp_feasible_vertices:
@@ -441,15 +393,12 @@ class Visualizer:
             pos_x, pos_y = self._transform_spp_coords([pos])[0]; pygame.draw.circle(self.screen, (200, 0, 0), (pos_x, pos_y), 5)
 
 if __name__ == '__main__':
+    # 1. CRIE A INSTÂNCIA DO SEU AMBIENTE SPP2D
+    # Troque o 'dataset' pelo nome da instância que deseja visualizar
+    meu_ambiente_spp = SPP2D(dataset='jackobs1', decoder='D1_A', pairwise_IN=True)
+
+    # 2. CRIE A INSTÂNCIA DO VISUALIZADOR, PASSANDO SEU AMBIENTE
+    visualizador = Visualizer(spp_env=meu_ambiente_spp, screen_width=1600, screen_height=900)
     
-
-    meu_ambiente_spp = SPP2D(dataset='dighe2', pairwise=True)
-
-
-
-    # 4. CRIE A INSTÂNCIA DO VISUALIZADOR, PASSANDO SEU AMBIENTE
-    visualizador = Visualizer(spp_env=meu_ambiente_spp, screen_width=1024, screen_height=768)
-    
-    # 5. EXECUTE O VISUALIZADOR
+    # 3. EXECUTE O VISUALIZADOR
     visualizador.run()
-

@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, MultiPolygon, Point, LineString
 from shapely.ops import unary_union
 from shapely.affinity import translate
-sys.path.append(os.path.abspath("C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python"))
+sys.path.append(os.path.abspath("C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python"))
 
 from RKO_v3 import RKO
 
@@ -176,7 +176,7 @@ def multiplicar_tudo(d, multiplicador):
     return novo_dicionario
 
 def ler_poligonos(arquivo, escala=1):
-    with open( 'C:\\Users\\felip\\OneDrive\\Documentos\\GitHub\\RKO\\Python\\Problems\\2DISPP\\' + arquivo + '.dat', 'r') as f:
+    with open( 'C:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\Problems\\2DISPP\\' + arquivo + '.dat', 'r') as f:
         conteudo = f.read().strip()
 
     # Divide o conteúdo em linhas
@@ -526,11 +526,20 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
                         pontos_candidatos.add(ponto)
                 
     # # Une todas as geometrias de interseção encontradas
-    # min_x, min_y, max_x, max_y = nfp_unido.bounds
-    # padding = 1.0 
+    min_x, min_y, max_x, max_y = nfp_unido.bounds
+    padding = 100.0 
+    
+    # max_x_p = min(v[0] for v in pontos_pol_A)
+    # max_y_p = min(v[1] for v in pontos_pol_A)
 
-    # # Itere sobre os vértices da Peça A
-    # for ponto in pontos_pol_A:
+        # Retorna a lista de vértices transladados
+    # print(pontos_pol_A)
+    pontos_pol_nor_A = [(x - pontos_pol_B[0][0], y - pontos_pol_B[0][1]) for x, y in pontos_pol_A]
+    
+    pontos_candidatos = set()
+    # print(pontos_pol_nor_A)
+    # Itere sobre os vértices da Peça A
+    # for ponto in pontos_pol_nor_A:
     #     x_vertice, y_vertice = ponto
 
     #     # --- Raio Vertical para Cima ---
@@ -553,24 +562,26 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     #     intersecao_esquerda = nfp_unido.boundary.intersection(linha_esquerda)
     #     pontos_candidatos.update(extrair_vertices(intersecao_esquerda))
         
-    # for ponto in pontos_pol_B:
-    #     pontos_candidatos.add(Point(ponto))
+    for ponto in pontos_pol_nor_A:
+        pontos_candidatos.add(Point(ponto))
     
 
   
     intersec = MultiPoint(list(pontos_candidatos))
     
     nfp_f = []
-    inter = []
+    inter = set()
+    
     for ponto in extrair_vertices(intersec):
         if nfp_unido.touches(Point(ponto)):
             nfp_f.append(ponto)
         else:
-            inter.append(ponto)
+            inter.add(ponto)
             
     intersec = MultiPoint(inter)
-    nfp_unido = unary_union([nfp_unido, MultiPoint(nfp_f)])
-        
+    # print(nfp_unido)
+    nfp_unido = unary_union([nfp_unido, MultiPoint(nfp_f).buffer(0.000000001)])
+    # print(nfp_unido)
     # # print(intersec)
     polyA = Polygon(pontos_pol_A)
     polyB = Polygon(pontos_pol_B)
@@ -592,7 +603,7 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     
     # # --- ETAPA 2: Visualização ---
 
-    # # --- ETAPA 2: Visualização em Layout 2x2 ---
+    # # # --- ETAPA 2: Visualização em Layout 2x2 ---
     # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 16))
     # fig.suptitle(f"Análise do NFP entre Peça A (rot {grauA}°) e Peça B (rot {grauB}°)", fontsize=16)
 
@@ -601,6 +612,18 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     # plot_shapely_geometry(ax1, polyA, facecolor='gray', alpha=0.3)
     # for i, part in enumerate(convex_partsA):
     #     plot_shapely_geometry(ax1, part, facecolor=f'C{i}', alpha=0.5)
+        
+    # # pontos_criticos = nfp_f
+
+    # # # 2. Garante que há pontos para plotar
+    # # if pontos_criticos:
+    # #     # Separa as coordenadas X e Y para o Matplotlib
+    # #     x_vertices = [ponto[0] for ponto in pontos_criticos]
+    # #     y_vertices = [ponto[1] for ponto in pontos_criticos]
+        
+    # #     # 3. Plota os pontos em preto ('k') com marcadores de círculo ('o')
+    # #     ax4.plot(x_vertices, y_vertices, 'ro', markersize=7, label='Vértices Críticos', )
+    # #     ax1.plot(x_vertices, y_vertices, 'ko', markersize=7, label='Vértices Críticos', )
     
     # # Gráfico 2: Decomposição da Peça B
     # ax2.set_title("2. Decomposição Convexa da Peça B (Rotacional)")
@@ -634,6 +657,18 @@ def NFP(PecaA, grauA, PecaB, grauB, env):
     #             ax4.plot(*geom.xy, color='black', linewidth=3)
     
     # ax3.legend(loc='upper right') # Adiciona a legenda ao gráfico 3
+    
+    # pontos_criticos = extrair_vertices(nfp_unido)
+
+    # # 2. Garante que há pontos para plotar
+    # if pontos_criticos:
+    #     # Separa as coordenadas X e Y para o Matplotlib
+    #     x_vertices = [ponto[0] for ponto in pontos_criticos]
+    #     y_vertices = [ponto[1] for ponto in pontos_criticos]
+        
+    #     # 3. Plota os pontos em preto ('k') com marcadores de círculo ('o')
+    #     ax4.plot(x_vertices, y_vertices, 'ko', markersize=7, label='Vértices Críticos')
+
     # # --- FIM DO NOVO BLOCO ---
     
     # # Ajusta os limites de todos os eixos
@@ -731,7 +766,7 @@ def calcular_shrink_factor(x):
         return 1 + 0.1 * math.log10(x)
 
 class SPP2D():
-    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200, decoder = 'D1', pairwise = False):
+    def __init__(self,dataset='fu',Base=None,Altura=None,Escala=None, Graus = None, tabela = None, margem = 0, tempo=200, decoder = 'D1', pairwise_IN = False):
         self.decoder_type = decoder
         
         self.save_q_learning_report = True
@@ -750,7 +785,7 @@ class SPP2D():
             'alphaSA': [0.5, 0.7],   # Fator de resfriamento
             'betaMin': [0.01, 0.03],   # Intensidade mínima da perturbação (shaking)
             'betaMax': [0.05, 0.1],   # Intensidade máxima da perturbação (shaking)
-            'T0': [10]      # Temperatura inicial
+            'T0': [1000]      # Temperatura inicial
         }
 
         # Parâmetros para Iterated Local Search (ILS)
@@ -822,14 +857,14 @@ class SPP2D():
 
         porcentagens_por_dataset = {
             'albano': 0.0,
-            'dagli': 0.20,
+            'dagli': 0.0,
             'dighe1': 0.0,
             'dighe2': 0.0,
             'fu': 0.0,
-            'jackobs1': 0.20,
+            'jackobs1': 0.0,
             'jackobs2': 0.40,
             'mao': 0.0,
-            'marques': 0.10,
+            'marques': 0.0,
             'shapes0': 0.0,
             'shapes1': 0.0,
             'shapes2': 0.25,
@@ -839,6 +874,7 @@ class SPP2D():
         }
         
         porcentagem = porcentagens_por_dataset.get(self.dataset.lower(), 0.0)
+        pairwise = pairwise_IN and (porcentagem > 0)
 
 
 
@@ -893,47 +929,41 @@ class SPP2D():
         self.lista_anterior = []
         self.best_fit = 100000
 
+        print("aaaaaaaaaaaaaaaaaaaaaaa")
         if tabela is not None:
             self.tabela_nfps = tabela
-        
-        elif os.path.exists(f"nfp_{self.dataset}.txt") and  (not pairwise or porcentagem ==0.0):
-            with open(f"nfp_{self.dataset}.txt", "r") as f:
-                conteudo = f.read()
-            self.tabela_nfps = ast.literal_eval(conteudo)
+        else:
+            pairwise_mode = pairwise_IN and (porcentagem > 0)
             
-        elif os.path.exists(f"nfp_{self.dataset}_pairwise.txt") and pairwise:
+            if pairwise_mode:
+                pares_selecionados = self.pairwise(porcentagem_cluster=porcentagem)
+                self.lista = self.criar_lista_clusterizada(pares_selecionados)
+                self.lista_original = copy.deepcopy(self.lista)
+                
+                nfp_file = f"nfp_{self.dataset}_pairwise.txt"
+                
+                if os.path.exists(nfp_file):
+                    with open(nfp_file, "r") as f:
+                        conteudo = f.read()
+                    self.tabela_nfps = ast.literal_eval(conteudo)
+                else:
+                    self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
+                    with open(nfp_file, "w") as f:
+                        f.write(repr(self.tabela_nfps))
+            else:
+                nfp_file = f"C:\\Users\\felip\\Documents\\GitHub\\RKO\\nfp_{self.dataset}.txt"
+                
+                if os.path.exists(nfp_file):
+                    with open(nfp_file, "r") as f:
+                        conteudo = f.read()
+                    self.tabela_nfps = ast.literal_eval(conteudo)
+                else:
+                    self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
+                    with open(nfp_file, "w") as f:
+                        f.write(repr(self.tabela_nfps))
 
-            with open(f"nfp_{self.dataset}.txt", "r") as f:
-                conteudo = f.read()
-            self.tabela_nfps = ast.literal_eval(conteudo)
 
-            porcentagem = porcentagens_por_dataset.get(self.dataset.lower(), 0.0)
-            pares_selecionados = self.pairwise(porcentagem_cluster=porcentagem)
-            self.lista = self.criar_lista_clusterizada(pares_selecionados)
-            self.lista_original = copy.deepcopy(self.lista)
-        
-            with open(f"nfp_{self.dataset}_pairwise.txt", "r") as f:
-                conteudo = f.read()
-            self.tabela_nfps = ast.literal_eval(conteudo)
-
-        elif not pairwise:
-            self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
-            with open(f"nfp_{self.dataset}.txt", "w") as f:
-                f.write(repr(self.tabela_nfps))
-        elif pairwise:
-            with open(f"nfp_{self.dataset}.txt", "r") as f:
-                conteudo = f.read()
-            self.tabela_nfps = ast.literal_eval(conteudo)
-        
-            porcentagem = porcentagens_por_dataset.get(self.dataset.lower(), 0.0)
-            pares_selecionados = self.pairwise(porcentagem_cluster=porcentagem)
-            self.lista = self.criar_lista_clusterizada(pares_selecionados)
-            self.lista_original = copy.deepcopy(self.lista)
-
-            self.tabela_nfps = pre_processar_NFP(self.graus, self.lista, margem, self)
-            with open(f"nfp_{self.dataset}_pairwise.txt", "w") as f:
-                f.write(repr(self.tabela_nfps))
-
+        print("aaabbbbbbbbbbbb")
         self.max_pecas = len(self.lista_original)
         if self.decoder_type == 'D1_A' or self.decoder_type == 'D2_A':
             self.tam_solution = 2 * self.max_pecas + 1
@@ -946,7 +976,38 @@ class SPP2D():
             5: self.LU,
             6: self.UR,
             7: self.RU,
-        }        
+        }
+                        
+            # self.regras = {
+            #     # --- Bloco 1: Grupo Inferior-Esquerdo (Bottom-Left) ---
+            #     0: self.BL,
+            #     1: self.LB,
+            #     # 2: self.BL_NFP,
+            #     # 3: self.LB_NFP,
+
+            #     # --- Bloco 2: Grupo Inferior-Direito (Bottom-Right) ---
+            #     2: self.BR,
+            #     3: self.RB,
+            #     # 6: self.BR_NFP,
+            #     # 7: self.RB_NFP,
+                
+            #     # --- Bloco 3: Grupo Superior-Esquerdo (Upper-Left) ---
+            #     4: self.UL,
+            #     5: self.LU,
+            #     # 10: self.UL_NFP,
+            #     # 11: self.LU_NFP,
+
+            #     # --- Bloco 4: Grupo Superior-Direito (Upper-Right) ---
+            #     6: self.UR,
+            #     7: self.RU,
+            #     # 14: self.UR_NFP,
+            #     # 15: self.RU_NFP,
+                
+            #     # --- Bloco 5: Grupo de Centralidade ---
+            #     8: self.NC,      # Centralidade do Bin
+            #     9: self.NCG,     # Centralidade do Layout (Centro de Massa)
+            #     10: self.NCNFP,   # Centralidade da Região Factível
+            # }   
         elif self.decoder_type == 'D1_B' or self.decoder_type == 'D2_B':
             self.tam_solution = 3 * self.max_pecas + 1
             self.regras = {
@@ -1470,6 +1531,8 @@ class SPP2D():
 
             # translada o NFP
             p = affinity.translate(base_nfp, xoff=x2, yoff=y2)
+
+
             nfps.append(p)
 
             # translada pontos de interseção
@@ -1513,6 +1576,8 @@ class SPP2D():
         # salva no cache antes de retornar
         self.dict_nfps[prefixo_t] = (ocupado, intersec_final)
 
+        # print(len(extrair_vertices(ocupado)), len(extrair_vertices(intersec_final)))
+        # input()
         return ocupado, intersec_final    
     
     def feasible(self, peca, grau_indice, area=False):
@@ -1578,16 +1643,20 @@ class SPP2D():
                 if ponto not in vertices:
                     vertices.append(ponto)
 
+        vertices_validos = vertices
+        # for ponto in vertices:
+        #     if ponto not in vertices_validos:
+        #         vertices_validos.append(ponto)
         # 9. Salva no cache
         encaixes_area = encaixes.area if encaixes else 0
         # self.dict_feasible[chave] = {'vertices': vertices, 'area': encaixes_area}
 
         # 10. Retorna
         if area:
-            return vertices, encaixes_area
+            return vertices_validos, encaixes_area
         else:
             
-            return vertices
+            return vertices_validos
  
     def BL(self, peca, grau_indice):
         positions = self.feasible(peca,grau_indice)
@@ -1596,6 +1665,218 @@ class SPP2D():
         positions_bl = sorted(positions, key=lambda ponto: (ponto[0], ponto[1]))        
         bl = positions_bl[0]        
         return bl
+    
+    def BL_NFP(self, peca, grau_indice):
+        """
+        Heurística BL que considera APENAS os pontos de NFP, forçando o encaixe.
+        Se não houver pontos de NFP, ela recorre (fallback) à regra BL padrão.
+        """
+        # 1. Obtém todos os pontos factíveis (IFP + NFP) e os pontos do IFP
+        ifp_points = self.ifp(peca, grau_indice)  # Assumindo que ifp() retorna os vértices do IFP
+        all_positions = self.feasible(peca, grau_indice)
+        
+        # 2. Filtra a lista para manter apenas os pontos que NÃO vêm do IFP
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+                
+        # 3. Lógica de Fallback: Se não houver pontos de NFP, use a lista completa
+        #    Isso é crucial para posicionar a primeira peça.
+        if not nfp_positions:
+            positions_to_use = all_positions
+        else:
+            positions_to_use = nfp_positions
+            
+        # 4. Aplica a ordenação BL na lista de posições escolhida
+        if not positions_to_use:
+            return []  # Retorna falha somente se não houver nenhuma posição factível
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (ponto[0], ponto[1]))      
+        bl_position = sorted_positions[0]       
+        return bl_position
+    
+    def LB_NFP(self, peca, grau_indice):
+        """Heurística LB que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (ponto[1], ponto[0]))
+        return sorted_positions[0]
+
+    def BR_NFP(self, peca, grau_indice):
+        """Heurística BR que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (-ponto[0], ponto[1]))
+        return sorted_positions[0]
+
+    def RB_NFP(self, peca, grau_indice):
+        """Heurística RB que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (ponto[1], -ponto[0]))
+        return sorted_positions[0]
+
+    def UL_NFP(self, peca, grau_indice):
+        """Heurística UL que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (ponto[0], -ponto[1]))
+        return sorted_positions[0]
+
+    def LU_NFP(self, peca, grau_indice):
+        """Heurística LU que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (-ponto[1], ponto[0]))
+        return sorted_positions[0]
+
+    def UR_NFP(self, peca, grau_indice):
+        """Heurística UR que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (-ponto[0], -ponto[1]))
+        return sorted_positions[0]
+
+    def RU_NFP(self, peca, grau_indice):
+        """Heurística RU que considera APENAS os pontos de NFP, com fallback."""
+        ifp_points = self.ifp(peca, grau_indice)
+        all_positions = self.feasible(peca, grau_indice)
+        nfp_positions = [pos for pos in all_positions if pos not in ifp_points]
+        
+        positions_to_use = nfp_positions if nfp_positions else all_positions
+            
+        if not positions_to_use:
+            return []
+
+        sorted_positions = sorted(positions_to_use, key=lambda ponto: (-ponto[1], -ponto[0]))
+        return sorted_positions[0]
+
+    def NC(self, peca, grau_indice):
+        """
+        Heurística que seleciona a posição factível mais próxima ao centro
+        geométrico do bin.
+        """
+        positions = self.feasible(peca, grau_indice)
+        if not positions:
+            return []
+
+        # 1. Define o ponto de âncora: o centro do bin
+        centro_bin = (self.base / 2, self.altura / 2)
+
+        # 2. Ordena as posições factíveis pela distância Euclidiana até o centro do bin
+        sorted_positions = sorted(positions, 
+                                key=lambda ponto: math.dist(ponto, centro_bin))
+        
+        # 3. Retorna a posição mais próxima
+        return sorted_positions[0]
+    
+    def NCNFP(self, peca, grau_indice):
+        """
+        Heurística que seleciona a posição factível mais próxima ao centro
+        geométrico do bin.
+        """
+        positions = self.feasible(peca, grau_indice)
+        if not positions:
+            return []
+
+        # 1. Define o ponto de âncora: o centro do bin
+        sum_x = 0
+        sum_y = 0
+        len_vertices = len(positions)
+        for pos in positions:
+            sum_x+=pos[0]
+            sum_y+=pos[1]
+
+        centro_nfp = (sum_x/len_vertices , sum_y/len_vertices)
+        # 2. Ordena as posições factíveis pela distância Euclidiana até o centro do bin
+        sorted_positions = sorted(positions, 
+                                key=lambda ponto: math.dist(ponto, centro_nfp))
+        
+        # 3. Retorna a posição mais próxima
+        return sorted_positions[0]
+    
+    def NCG(self, peca, grau_indice):
+        """
+        Heurística que posiciona a nova peça no ponto factível mais próximo
+        ao centro de massa (centroide) das peças já posicionadas.
+        """
+        positions = self.feasible(peca, grau_indice)
+        if not positions:
+            return []
+
+        # Caso especial: se for a primeira peça, não há layout.
+        # A regra se comporta como a 'Centro_Mais_Proximo' por padrão.
+        if not self.pecas_posicionadas:
+            centro_bin = (self.base / 2, self.altura / 2)
+            sorted_positions = sorted(positions, 
+                                    key=lambda ponto: math.dist(ponto, centro_bin))
+            return sorted_positions[0]
+
+        # 1. Calcula o centro de massa (média das coordenadas dos centroides) do layout atual
+        num_vertices = 0
+        soma_x = 0
+        soma_y = 0
+        centros = []
+
+        for peca in self.pecas_posicionadas:
+            # num_vertices+=len(peca)
+            soma_x_peca = sum([x for x,y in peca])
+            soma_y_peca = sum([y for x,y in peca])
+            centros.append((soma_x_peca/len(peca) , soma_y_peca/len(peca)))
+        
+        soma_x = sum([x for x,y in centros])
+        soma_y = sum([y for x,y in centros])
+        
+        num_vertices = len(self.pecas_posicionadas)
+        centro_layout = (soma_x / num_vertices, soma_y / num_vertices)
+        
+        # 2. Ordena as posições factíveis pela distância do 'ponto' de referência
+        #    da nova peça até o centro de massa do layout.
+        sorted_positions = sorted(positions, 
+                                key=lambda ponto: math.dist(ponto, centro_layout))
+        
+        # 3. Retorna a posição mais próxima, promovendo o agrupamento.
+        return sorted_positions[0]
     
     def NBL(self, peca, grau_indice):
         positions = self.feasible(peca,grau_indice)
@@ -1728,7 +2009,7 @@ class SPP2D():
                 # base = self.base
                 # self.base
                 # if time.time() - self.start_time > 20:
-                #     self.plot(legenda='[]')
+                # self.plot(legenda='[]')
                 return True
             return False
         
@@ -1806,28 +2087,30 @@ class SPP2D():
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
             regras_idx = []
-            tipos_regras = 8
+            tipos_regras = len(self.regras)
             for key in regras:
                 regras_idx.append(int(key * tipos_regras))
                 
-            # print(rot_idx + regras_idx)
+            
             return rot_idx + regras_idx + [shrink_key]
           
-        elif self.decoder_type == 'D1_B':
-            pieces = keys[:self.max_pecas]            
-            rot = keys[self.max_pecas:2*self.max_pecas]
-            nfp_key = keys[2*self.max_pecas:]
+        elif self.decoder_type == 'D1_N':
+            rot = keys[:self.max_pecas]
+            regras = keys[self.max_pecas:-1]
+            shrink_key = keys[-1]
             
-            pieces_idx = np.argsort(pieces)
-
             rot_idx = []
             tipos_rot = len(self.graus)
             for key in rot:
                 rot_idx.append(self.graus[int(key * tipos_rot)])
                 
-     
+            regras_idx = []
+            tipos_regras = 8
+            for key in regras:
+                regras_idx.append(int(key * tipos_regras))
                 
-            return list(pieces_idx) + rot_idx + list(nfp_key)
+            
+            return rot_idx + regras_idx + [shrink_key]
        
         elif self.decoder_type == 'D2_A':
             rot = keys[:self.max_pecas]
@@ -2048,7 +2331,7 @@ class SPP2D():
                     fit = -1 * self.area_usada()                    
                     
                    
-                    # print(d,self.base, base_antigo)
+                    # # print(d,self.base, base_antigo)
                         
                     
 
@@ -2058,6 +2341,7 @@ class SPP2D():
                         fit = sum([Polygon(pol).area for pol in self.lista]) * 100 / (self.base * self.altura)
                         self.reset()
                         self.dict_sol[tuple(sol)] = fit
+                        
                         return fit
                     
                     # if round(fit,1) < round(self.best_fit,1) and fit < 0.95 * self.dict_best[self.instance_name]:
@@ -2070,7 +2354,7 @@ class SPP2D():
                         print("EROOROROROROR")
                     self.inicial = True
                     self.reset()
-                    self.dict_sol[tuple(sol)] = fit
+                    # self.dict_sol[tuple(sol)] = fit
                     return fit
         elif self.decoder_type == 'D1_B':
             if tuple(sol) in self.dict_sol:
@@ -2277,12 +2561,21 @@ class SPP2D():
 #     env.plot()
 
 if __name__ == '__main__':
-    instancias = ["shapes2","swim","jackobs2"]    
-    # instancias = [ "shapes2","swim","fu","jackobs1","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dighe1","dighe2","dagli","mao","marques","swim"] 
+    # instancias = ["shapes2","swim","jackobs2"]    
+    instancias = ["jackobs1","fu", "shapes2","swim","fu","trousers", "jackobs2","shapes0","shapes1","shapes2","albano","shirts","dagli","mao","marques","swim"] 
+    # instancias = [ "dighe1","dighe2","shapes2","swim","fu","jackobs1","trousers", "jackobs2","albano","shirts","dagli","mao","marques"] 
+    
+    # for ins in instancias:
+    #     env = SPP2D(dataset=ins, tempo=100, decoder='D0', pairwise_IN=True)
     # decoders = ['D0','D0_A','D2_A','D0_B','D1_A','D1_B',  'D2_B']
     decoders = ['D1_A']
     # for ins in instancias:
     # env = SPP2D(dataset=instancias[0], tempo=10, decoder='D0')
+    # env = SPP2D(dataset=instancias[0], tempo=0, decoder='D1_A', pairwise_IN=True)
+    # while True:
+    #     regra = int(input("Regra: "))
+    #     env.pack(0,0,regra)
+        
     for fd in range(10):
         for tempo in [2400]:    
             for restart in [1/6]:                
@@ -2291,8 +2584,8 @@ if __name__ == '__main__':
                         list_time = []
                         list_cost = []
                         
-                        env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder, pairwise=True)
-                        # i = 0
+                        env = SPP2D(dataset=ins, tempo=tempo * restart, decoder=decoder, pairwise_IN=True)
+                        i = 0
                         # start = time.time()
                         # while time.time() - start < 10:
                         #     keys = np.random.random(env.tam_solution)
@@ -2304,6 +2597,6 @@ if __name__ == '__main__':
                         # print(i)
 
                         print(len(env.lista), sum(Polygon(pol).area for pol in env.lista)/env.area)
-                        solver = RKO(env, print_best=True, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
-                        cost,sol, temp = solver.solve(tempo,brkga=1,ms=0,sa=3,vns=1,ils=0, lns=0, pso=1, ga=0, restart= restart,  runs=1)
+                        solver = RKO(env, print_best=False, save_directory=f'c:\\Users\\felip\\Documents\\GitHub\\RKO\\Python\\testes_SPP\\{decoder}_SPP_{tempo}_{restart}\\testes_RKO.csv')
+                        cost,sol, temp = solver.solve(tempo,brkga=1,ms=1,sa=1,vns=1,ils=1, lns=1, pso=1, ga=1, restart= restart,  runs=2)
 
